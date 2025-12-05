@@ -28,12 +28,13 @@ gcloud config set project $PROJECT_ID
 
 # Build the container
 echo "🔨 Building container image..."
-gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME
+IMAGE_URL="us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/$SERVICE_NAME"
+gcloud builds submit --tag $IMAGE_URL
 
 # Deploy to Cloud Run
 echo "🚢 Deploying to Cloud Run..."
 gcloud run deploy $SERVICE_NAME \
-  --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
+  --image $IMAGE_URL \
   --platform managed \
   --region $REGION \
   --allow-unauthenticated \

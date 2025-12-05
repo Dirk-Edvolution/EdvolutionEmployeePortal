@@ -15,7 +15,13 @@
       "Bash(git push)",
       "Bash(gcloud services:*)",
       "Bash(gcloud storage buckets get-iam-policy:*)",
-      "Bash(gcloud projects add-iam-policy-binding:*)"
+      "Bash(gcloud projects add-iam-policy-binding:*)",
+      "Bash(gcloud run services list:*)",
+      "Bash(python -m backend.app.main:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

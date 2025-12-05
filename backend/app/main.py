@@ -44,12 +44,6 @@ def create_app():
             'status': 'running'
         }), 200
 
-    # Test portal interface
-    @app.route('/test-portal.html')
-    def test_portal():
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        return send_from_directory(project_root, 'test-portal.html')
-
     # Serve frontend static files (for production)
     @app.route('/<path:path>')
     def serve_frontend(path):

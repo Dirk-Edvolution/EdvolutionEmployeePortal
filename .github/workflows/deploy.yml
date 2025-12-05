@@ -11,7 +11,7 @@ env:
   SERVICE_NAME: employee-portal
   # These ideally should be GitHub Secrets/Variables, but for the tutorial we set them here matching your .env
   WORKSPACE_DOMAIN: edvolution.io
-  ADMIN_USERS: dirk@edvolution.io,admin@edvolution.io
+  ADMIN_USERS: dirk@edvolution.io
 
 jobs:
   deploy:

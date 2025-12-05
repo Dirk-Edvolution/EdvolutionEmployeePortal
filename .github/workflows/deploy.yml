@@ -34,7 +34,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # Build container image
+      # Build container image explicitly using Cloud Build
       - name: Build Container Image
         run: |
           IMAGE_URL="us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/my-repo/${{ env.SERVICE_NAME }}"

@@ -43,6 +43,7 @@ jobs:
         run: |
           IMAGE_URL="us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/my-repo/${{ env.SERVICE_NAME }}"
           gcloud builds submit --region=${{ env.REGION }} --tag $IMAGE_URL \
+            --service-account="projects/${{ env.PROJECT_ID }}/serviceAccounts/github-actions-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com" \
             --gcs-source-staging-dir="gs://${{ env.PROJECT_ID }}-staging/source" \
             --gcs-log-dir="gs://${{ env.PROJECT_ID }}-staging/logs"
 

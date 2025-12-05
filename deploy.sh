@@ -30,6 +30,7 @@ gcloud config set project $PROJECT_ID
 echo "🔨 Building container image..."
 IMAGE_URL="us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/$SERVICE_NAME"
 gcloud builds submit --tag $IMAGE_URL \
+  --service-account="projects/${PROJECT_ID}/serviceAccounts/github-actions-deployer@${PROJECT_ID}.iam.gserviceaccount.com" \
   --gcs-source-staging-dir="gs://${PROJECT_ID}-staging/source" \
   --gcs-log-dir="gs://${PROJECT_ID}-staging/logs"
 

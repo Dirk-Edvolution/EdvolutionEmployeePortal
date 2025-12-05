@@ -5,7 +5,10 @@
       "Bash(python add_test_employee.py:*)",
       "Bash(curl:*)",
       "Bash(lsof:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(gcloud iam service-accounts list:*)",
+      "Bash(gcloud storage buckets list:*)",
+      "Bash(gcloud projects get-iam-policy:*)"
     ],
     "deny": [],
     "ask": []

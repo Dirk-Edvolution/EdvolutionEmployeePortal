@@ -34,12 +34,24 @@ gcloud builds submit --tag $IMAGE_URL \
   --gcs-source-staging-dir="gs://${PROJECT_ID}-staging/source" \
   --gcs-log-dir="gs://${PROJECT_ID}-staging/logs"
 
+# Get the service URL (if it exists, to build correct redirect URI)
+echo "🔍 Checking for existing service..."
+EXISTING_SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)' 2>/dev/null || echo "")
+
+if [ -z "$EXISTING_SERVICE_URL" ]; then
+  echo "⚠️  Service not found. Using placeholder URL for GOOGLE_REDIRECT_URI."
+  REDIRECT_URI="https://${SERVICE_NAME}-5n2ivebvra-uc.a.run.app/auth/callback"
+else
+  REDIRECT_URI="${EXISTING_SERVICE_URL}/auth/callback"
+  echo "✓ Using existing service URL for redirect: $REDIRECT_URI"
+fi
+
 # Deploy to Cloud Run
 echo "🚢 Deploying to Cloud Run..."
 gcloud run deploy $SERVICE_NAME \
   --image $IMAGE_URL \
   --platform managed \
-  --service-account employee-portal-runtime@edvolution-admon.iam.gserviceaccount.com \
+  --service-account employee-portal-runtime@${PROJECT_ID}.iam.gserviceaccount.com \
   --region $REGION \
   --allow-unauthenticated \
   --memory 512Mi \
@@ -48,8 +60,13 @@ gcloud run deploy $SERVICE_NAME \
   --max-instances 10 \
   --set-env-vars GCP_PROJECT_ID=$PROJECT_ID \
   --set-env-vars GCP_LOCATION=$REGION \
+  --set-env-vars GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} \
+  --set-env-vars GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} \
+  --set-env-vars GOOGLE_REDIRECT_URI=https://${SERVICE_NAME}-5n2ivebvra-uc.a.run.app/auth/callback \
+  --set-env-vars FLASK_SECRET_KEY=a728c9a60328bdcd7036910d5f1850c38724dfea9fa50034a07806a9b68112ef \
   --set-env-vars FLASK_ENV=$ENVIRONMENT \
   --set-env-vars WORKSPACE_DOMAIN=${WORKSPACE_DOMAIN} \
+  --set-env-vars WORKSPACE_ADMIN_EMAIL=${ADMIN_USERS} \
   --set-env-vars ADMIN_USERS=${ADMIN_USERS}
 
 # Get the service URL
@@ -58,10 +75,14 @@ SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --form
 echo "✅ Deployment complete!"
 echo "🌐 Service URL: $SERVICE_URL"
 echo ""
-echo "📝 Next steps:"
-echo "1. Update your OAuth redirect URI to: $SERVICE_URL/auth/callback"
-echo "2. Update GOOGLE_REDIRECT_URI environment variable"
-echo "3. Configure secrets in Secret Manager"
+echo "📝 Important Notes:"
+echo "1. OAuth redirect URI is set to: ${REDIRECT_URI}"
+echo "2. Make sure this matches the authorized redirect URI in Google Cloud Console"
+echo "3. FLASK_SECRET_KEY and OAuth credentials are set from environment variables"
 echo ""
-echo "To configure secrets, run:"
-echo "  ./setup-secrets.sh"
+echo "Environment variables used:"
+echo "  - GOOGLE_CLIENT_ID (from env)"
+echo "  - GOOGLE_CLIENT_SECRET (from env)"
+echo "  - FLASK_SECRET_KEY (from env)"
+echo "  - WORKSPACE_DOMAIN=${WORKSPACE_DOMAIN}"
+echo "  - ADMIN_USERS=${ADMIN_USERS}"

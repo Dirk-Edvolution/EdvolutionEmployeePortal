@@ -23,6 +23,7 @@ def create_app():
         'http://localhost:3000',
         'http://localhost:8080',
         'https://*.run.app',
+        'https://employee-portal-5n2ivebvra-uc.a.run.app'
     ])
 
     # Register blueprints
@@ -35,22 +36,23 @@ def create_app():
     def health_check():
         return jsonify({'status': 'healthy'}), 200
 
-    # Root endpoint
+    # Root endpoint - serve frontend entry point
     @app.route('/')
     def index():
-        return jsonify({
-            'name': 'Employee Portal API',
-            'version': '1.0.0',
-            'status': 'running'
-        }), 200
+        return serve_frontend('index.html')
 
     # Serve frontend static files (for production)
     @app.route('/<path:path>')
     def serve_frontend(path):
+        # API and Auth routes should be handled by blueprints, but just in case:
+        if path.startswith('api/') or path.startswith('auth/'):
+            return jsonify({'error': 'Not found'}), 404
+
         frontend_dir = os.path.join(app.static_folder)
         if os.path.exists(os.path.join(frontend_dir, path)):
             return send_from_directory(frontend_dir, path)
         else:
+            # SPA Fallback for non-API routes
             return send_from_directory(frontend_dir, 'index.html')
 
     # Error handlers

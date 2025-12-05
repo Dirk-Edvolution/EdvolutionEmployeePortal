@@ -40,7 +40,7 @@ jobs:
         run: |
           IMAGE_URL="us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/my-repo/${{ env.SERVICE_NAME }}"
           
-          gcloud builds submit --tag $IMAGE_URL
+          gcloud builds submit --tag $IMAGE_URL --gcs-source-staging-dir="gs://${{ env.PROJECT_ID }}-staging/source"
           
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image $IMAGE_URL \

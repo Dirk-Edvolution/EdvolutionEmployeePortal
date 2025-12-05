@@ -29,7 +29,7 @@ gcloud config set project $PROJECT_ID
 # Build the container
 echo "🔨 Building container image..."
 IMAGE_URL="us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/$SERVICE_NAME"
-gcloud builds submit --tag $IMAGE_URL
+gcloud builds submit --tag $IMAGE_URL --gcs-source-staging-dir="gs://${PROJECT_ID}-staging/source"
 
 # Deploy to Cloud Run
 echo "🚢 Deploying to Cloud Run..."

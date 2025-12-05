@@ -38,11 +38,20 @@ jobs:
       - name: Debug Bucket Access
         run: gcloud storage ls gs://${{ env.PROJECT_ID }}-staging/ || echo "Bucket listing failed"
 
-      # Deploy to Cloud Run (building from source)
+      # Build Container Image
+      - name: Build Container Image
+        run: |
+          IMAGE_URL="us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/my-repo/${{ env.SERVICE_NAME }}"
+          gcloud builds submit --region=${{ env.REGION }} --tag $IMAGE_URL \
+            --gcs-source-staging-dir="gs://${{ env.PROJECT_ID }}-staging/source" \
+            --gcs-log-dir="gs://${{ env.PROJECT_ID }}-staging/logs"
+
+      # Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
+          IMAGE_URL="us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/my-repo/${{ env.SERVICE_NAME }}"
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --source . \
+            --image $IMAGE_URL \
             --platform managed \
             --service-account employee-portal-runtime@edvolution-admon.iam.gserviceaccount.com \
             --region ${{ env.REGION }} \

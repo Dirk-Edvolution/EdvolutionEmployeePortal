@@ -14,6 +14,6 @@ README.md
 .idea
 *.swp
 *.swo
-frontend/
+
 tests/
 *.md

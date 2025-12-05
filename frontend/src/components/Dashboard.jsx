@@ -17,9 +17,9 @@ export default function Dashboard({ user, onLogout }) {
 
   useEffect(() => {
     loadData()
-    if (user.is_admin || pendingApprovals.length > 0) {
-      loadEmployees()
-    }
+    // Load employees for admins and managers
+    // The backend will filter appropriately based on permissions
+    loadEmployees()
   }, [])
 
   async function loadData() {
@@ -460,8 +460,7 @@ export default function Dashboard({ user, onLogout }) {
                   .map((emp) => (
                   <div key={emp.email} className="employee-card">
                     <div className="employee-info">
-                      <strong>{emp.full_name || emp.email}</strong>
-                      <span>{emp.email}</span>
+                      <strong>{emp.display_name || emp.full_name || emp.email}</strong>
                       {emp.job_title && <span className="job-title">{emp.job_title}</span>}
                     </div>
                     <div className="employee-details">
@@ -491,7 +490,7 @@ export default function Dashboard({ user, onLogout }) {
                       className="edit-btn"
                       disabled={loading}
                     >
-                      ✏️ Edit
+                      👁️ View
                     </button>
                   </div>
                 ))}
@@ -501,86 +500,75 @@ export default function Dashboard({ user, onLogout }) {
             {editingEmployee && (
               <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                  <h2>Edit Team Member: {editingEmployee.full_name || editingEmployee.email}</h2>
-                  <form onSubmit={(e) => {
-                    e.preventDefault()
-                    const formData = new FormData(e.target)
-                    handleUpdateEmployee(editingEmployee.email, {
-                      department: formData.get('department'),
-                      job_title: formData.get('job_title'),
-                      location: formData.get('location'),
-                      country: formData.get('country'),
-                      region: formData.get('region')
-                    })
-                  }}>
+                  <h2>View Team Member: {editingEmployee.full_name || editingEmployee.email}</h2>
+                  <div className="info-message" style={{ background: '#e3f2fd', padding: '12px', borderRadius: '4px', marginBottom: '16px', fontSize: '14px' }}>
+                    ℹ️ As a manager, you can view your team members' information but cannot edit it. Only HR admins can modify employee data.
+                  </div>
+                  <div className="employee-view-only">
                     <div className="form-group">
                       <label>Organizational Unit (from Google Workspace)</label>
                       <input
                         type="text"
-                        name="organizational_unit"
-                        defaultValue={editingEmployee.organizational_unit || ''}
+                        value={editingEmployee.organizational_unit || 'Not set'}
                         disabled
                         style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                       />
-                      <small style={{ color: '#666', fontSize: '12px' }}>This is synced from Google Workspace and cannot be edited here.</small>
                     </div>
                     <div className="form-group">
                       <label>Department / Team</label>
                       <input
                         type="text"
-                        name="department"
-                        defaultValue={editingEmployee.department || ''}
-                        placeholder="e.g., Backend Team, Customer Success, Product Design"
+                        value={editingEmployee.department || 'Not set'}
+                        disabled
+                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                       />
                     </div>
                     <div className="form-group">
                       <label>Job Title</label>
                       <input
                         type="text"
-                        name="job_title"
-                        defaultValue={editingEmployee.job_title || ''}
+                        value={editingEmployee.job_title || 'Not set'}
+                        disabled
+                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                       />
                     </div>
                     <div className="form-group">
                       <label>Location</label>
                       <input
                         type="text"
-                        name="location"
-                        defaultValue={editingEmployee.location || ''}
-                        placeholder="e.g., New York Office, Remote"
+                        value={editingEmployee.location || 'Not set'}
+                        disabled
+                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                       />
                     </div>
                     <div className="form-group">
                       <label>Country</label>
                       <input
                         type="text"
-                        name="country"
-                        defaultValue={editingEmployee.country || ''}
-                        placeholder="e.g., United States, Canada"
+                        value={editingEmployee.country || 'Not set'}
+                        disabled
+                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                       />
                     </div>
                     <div className="form-group">
                       <label>Region</label>
                       <input
                         type="text"
-                        name="region"
-                        defaultValue={editingEmployee.region || ''}
-                        placeholder="e.g., North America, EMEA, APAC"
+                        value={editingEmployee.region || 'Not set'}
+                        disabled
+                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
                       />
                     </div>
                     <div className="modal-actions">
-                      <button type="submit" className="submit-btn" disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Changes'}
-                      </button>
                       <button
                         type="button"
                         onClick={() => setEditingEmployee(null)}
                         className="cancel-btn"
                       >
-                        Cancel
+                        Close
                       </button>
                     </div>
-                  </form>
+                  </div>
                 </div>
               </div>
             )}
@@ -659,8 +647,7 @@ export default function Dashboard({ user, onLogout }) {
                   .map((emp) => (
                   <div key={emp.email} className="employee-card">
                     <div className="employee-info">
-                      <strong>{emp.full_name || emp.email}</strong>
-                      <span>{emp.email}</span>
+                      <strong>{emp.display_name || emp.full_name || emp.email}</strong>
                       {emp.job_title && <span className="job-title">{emp.job_title}</span>}
                     </div>
                     <div className="employee-details">

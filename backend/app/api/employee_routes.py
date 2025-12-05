@@ -99,22 +99,34 @@ def get_employee(email):
     current_email = get_current_user_email()
 
     # Check permissions
-    if not is_admin(current_email) and current_email != email:
-        employee = db.get_employee(email)
-        if not employee or employee.manager_email != current_email:
-            return jsonify({'error': 'Permission denied'}), 403
+    is_user_admin = is_admin(current_email)
+    is_viewing_self = current_email == email
 
     employee = db.get_employee(email)
     if not employee:
         return jsonify({'error': 'Employee not found'}), 404
 
-    return jsonify(employee.to_dict()), 200
+    is_manager = employee.manager_email == current_email
+
+    # Only allow access if: admin, self, or manager
+    if not (is_user_admin or is_viewing_self or is_manager):
+        return jsonify({'error': 'Permission denied'}), 403
+
+    result = employee.to_dict()
+    # Add metadata about viewing permissions
+    result['_permissions'] = {
+        'can_edit': is_user_admin,  # Only admins can edit
+        'is_manager_view': is_manager and not is_user_admin,  # Manager viewing team member (read-only)
+        'is_admin': is_user_admin
+    }
+
+    return jsonify(result), 200
 
 
 @employee_bp.route('/<email>', methods=['PUT'])
-@login_required
+@admin_required
 def update_employee(email):
-    """Update employee (admin or manager only)"""
+    """Update employee (admin only - managers have read-only access)"""
     db = FirestoreService()
     current_email = get_current_user_email()
     employee = db.get_employee(email)
@@ -122,42 +134,28 @@ def update_employee(email):
     if not employee:
         return jsonify({'error': 'Employee not found'}), 404
 
-    # Check permissions
-    is_user_admin = is_admin(current_email)
-    is_manager = employee.manager_email == current_email
-
-    if not (is_user_admin or is_manager):
-        return jsonify({'error': 'Permission denied'}), 403
-
     data = request.json
 
-    # Managers can only update limited fields
-    if is_manager and not is_user_admin:
-        manager_updatable_fields = ['job_title', 'department', 'location', 'country', 'region']
+    # Only admins can update employee fields
+    # Managers have read-only access (they can only view their team members)
+    updatable_fields = [
+        'manager_email', 'department', 'job_title', 'location',
+        'country', 'region', 'vacation_days_per_year',
+        # HHRR fields
+        'contract_type', 'contract_start_date', 'contract_end_date', 'contract_document_url',
+        'salary', 'salary_currency', 'has_bonus', 'bonus_type', 'bonus_percentage',
+        'has_commission', 'commission_notes',
+        'personal_address', 'working_address',
+        'spouse_partner_name', 'spouse_partner_phone', 'spouse_partner_email'
+    ]
 
-        for field in manager_updatable_fields:
-            if field in data:
-                setattr(employee, field, data[field])
-    else:
-        # Admins can update all fields including HHRR-specific fields
-        updatable_fields = [
-            'manager_email', 'department', 'job_title', 'location',
-            'country', 'region', 'vacation_days_per_year',
-            # HHRR fields
-            'contract_type', 'contract_start_date', 'contract_end_date', 'contract_document_url',
-            'salary', 'salary_currency', 'has_bonus', 'bonus_type', 'bonus_percentage',
-            'has_commission', 'commission_notes',
-            'personal_address', 'working_address',
-            'spouse_partner_name', 'spouse_partner_phone', 'spouse_partner_email'
-        ]
+    for field in updatable_fields:
+        if field in data:
+            setattr(employee, field, data[field])
 
-        for field in updatable_fields:
-            if field in data:
-                setattr(employee, field, data[field])
-
-        # IMPORTANT: is_admin is NOT updatable through this endpoint
-        # Admin status is determined solely by the ADMIN_USERS environment variable
-        # This prevents privilege escalation attacks
+    # IMPORTANT: is_admin is NOT updatable through this endpoint
+    # Admin status is determined solely by the ADMIN_USERS environment variable
+    # This prevents privilege escalation attacks
 
     db.update_employee(employee)
 

@@ -95,6 +95,11 @@ class Employee:
         self.updated_at = updated_at or datetime.utcnow()
         self.last_workspace_sync = last_workspace_sync
 
+    @property
+    def display_name(self) -> str:
+        """Return display name with email in parentheses"""
+        return f"{self.full_name} ({self.email})"
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert employee to dictionary for Firestore"""
         return {
@@ -103,6 +108,7 @@ class Employee:
             'given_name': self.given_name,
             'family_name': self.family_name,
             'full_name': self.full_name,
+            'display_name': self.display_name,
             'photo_url': self.photo_url,
             'manager_email': self.manager_email,
             'organizational_unit': self.organizational_unit,

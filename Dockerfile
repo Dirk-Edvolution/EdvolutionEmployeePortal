@@ -37,7 +37,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY backend/ ./backend/
-COPY test-portal.html .
+
 
 # Copy built frontend assets from Stage 1
 # Note: app.py expects static_folder='../../frontend/dist' relative to backend/app/main.py

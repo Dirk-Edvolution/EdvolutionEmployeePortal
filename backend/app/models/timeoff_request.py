@@ -134,7 +134,14 @@ class TimeOffRequest:
 
     def can_approve_admin(self, user_email: str, admin_users: List[str]) -> bool:
         """Check if user can approve as admin"""
-        return (
-            self.status == ApprovalStatus.MANAGER_APPROVED and
-            user_email in admin_users
+        # Admins can approve if:
+        # 1. Status is manager_approved (normal flow)
+        # 2. OR status is pending AND user is both manager and admin (skip manager approval step)
+        is_admin = user_email in admin_users
+        is_manager_approved = self.status == ApprovalStatus.MANAGER_APPROVED
+        is_pending_and_is_manager = (
+            self.status == ApprovalStatus.PENDING and
+            user_email == self.manager_email
         )
+
+        return is_admin and (is_manager_approved or is_pending_and_is_manager)

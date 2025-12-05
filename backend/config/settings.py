@@ -39,8 +39,8 @@ FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-me')
 FLASK_ENV = os.getenv('FLASK_ENV', 'development')
 PORT = int(os.getenv('PORT', 8080))
 
-# Admin Users
-ADMIN_USERS = os.getenv('ADMIN_USERS', '').split(',')
+# Admin Users - strip whitespace and filter empty strings
+ADMIN_USERS = [email.strip() for email in os.getenv('ADMIN_USERS', '').split(',') if email.strip()]
 
 # Firestore Collections
 EMPLOYEES_COLLECTION = os.getenv('EMPLOYEES_COLLECTION', 'employees')

@@ -1,0 +1,17 @@
+Domain-wide Delegation Configuration
+=====================================
+
+Use these exact values:
+
+Client ID (FULL):
+844588465159-6u1fddcv01484hood782ht9a6tpv9i17.apps.googleusercontent.com
+
+OAuth Scopes (copy all as one line, comma-separated):
+https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/calendar,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/gmail.settings.basic,https://www.googleapis.com/auth/gmail.settings.sharing
+
+Instructions:
+1. Go to: https://admin.google.com/ac/owl/domainwidedelegation
+2. Click "Add new"
+3. Paste the FULL Client ID above (including .apps.googleusercontent.com)
+4. Paste all the OAuth scopes (comma-separated, no spaces)
+5. Click "Authorize"

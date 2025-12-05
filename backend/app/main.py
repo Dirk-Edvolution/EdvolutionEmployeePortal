@@ -1,0 +1,79 @@
+"""
+Main Flask application for Employee Portal
+"""
+from flask import Flask, jsonify, send_from_directory
+from flask_cors import CORS
+from backend.config.settings import FLASK_SECRET_KEY, FLASK_ENV
+from backend.app.api import auth_bp, employee_bp, timeoff_bp
+import os
+
+
+def create_app():
+    """Create and configure Flask application"""
+    app = Flask(__name__, static_folder='../../frontend/dist')
+
+    # Configuration
+    app.secret_key = FLASK_SECRET_KEY
+    app.config['SESSION_COOKIE_SECURE'] = FLASK_ENV == 'production'
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+    # Enable CORS
+    CORS(app, supports_credentials=True, origins=[
+        'http://localhost:3000',
+        'http://localhost:8080',
+        'https://*.run.app',
+    ])
+
+    # Register blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(employee_bp)
+    app.register_blueprint(timeoff_bp)
+
+    # Health check endpoint
+    @app.route('/health')
+    def health_check():
+        return jsonify({'status': 'healthy'}), 200
+
+    # Root endpoint
+    @app.route('/')
+    def index():
+        return jsonify({
+            'name': 'Employee Portal API',
+            'version': '1.0.0',
+            'status': 'running'
+        }), 200
+
+    # Test portal interface
+    @app.route('/test-portal.html')
+    def test_portal():
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        return send_from_directory(project_root, 'test-portal.html')
+
+    # Serve frontend static files (for production)
+    @app.route('/<path:path>')
+    def serve_frontend(path):
+        frontend_dir = os.path.join(app.static_folder)
+        if os.path.exists(os.path.join(frontend_dir, path)):
+            return send_from_directory(frontend_dir, path)
+        else:
+            return send_from_directory(frontend_dir, 'index.html')
+
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(e):
+        return jsonify({'error': 'Not found'}), 404
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        return jsonify({'error': 'Internal server error'}), 500
+
+    return app
+
+
+# Create app instance
+app = create_app()
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=True)

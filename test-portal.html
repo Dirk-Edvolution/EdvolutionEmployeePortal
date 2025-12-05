@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Portal - Test Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4285f4;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #357ae8;
+        }
+        button.danger {
+            background: #ea4335;
+        }
+        button.success {
+            background: #34a853;
+        }
+        #output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 Employee Portal - Test Interface</h1>
+
+        <div class="section">
+            <h2>Authentication</h2>
+            <button onclick="window.location.href='/auth/login'">🔐 Login with Google</button>
+            <button onclick="checkAuthStatus()">✓ Check Auth Status</button>
+            <button onclick="window.location.href='/auth/logout'" class="danger">🚪 Logout</button>
+        </div>
+
+        <div class="section">
+            <h2>Admin Functions</h2>
+            <button onclick="syncEmployees()" class="success">🔄 Sync Employees from Workspace</button>
+            <button onclick="listAllEmployees()">👥 List All Employees</button>
+        </div>
+
+        <div class="section">
+            <h2>Employee Functions</h2>
+            <button onclick="getMyProfile()">👤 Get My Profile</button>
+            <button onclick="getVacationSummary()">📊 Get Vacation Summary</button>
+            <button onclick="getMyRequests()">📝 Get My Requests</button>
+            <button onclick="getPendingApprovals()">⏳ Get Pending Approvals</button>
+        </div>
+
+        <div class="section">
+            <h2>Create Time-off Request</h2>
+            <div class="input-group">
+                <label>Start Date:</label>
+                <input type="date" id="startDate" value="2024-12-20">
+            </div>
+            <div class="input-group">
+                <label>End Date:</label>
+                <input type="date" id="endDate" value="2024-12-27">
+            </div>
+            <div class="input-group">
+                <label>Type:</label>
+                <select id="timeoffType" style="width: 100%; padding: 8px;">
+                    <option value="vacation">Vacation</option>
+                    <option value="sick_leave">Sick Leave</option>
+                    <option value="day_off">Day Off</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Notes:</label>
+                <textarea id="notes" placeholder="Optional notes..."></textarea>
+            </div>
+            <button onclick="createTimeoffRequest()" class="success">✉️ Submit Request</button>
+        </div>
+
+        <div class="section">
+            <h2>Output</h2>
+            <div id="output">Ready... Click a button above to test the API.</div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, data = null) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            let logText = `[${timestamp}] ${message}\n`;
+
+            if (data) {
+                logText += JSON.stringify(data, null, 2) + '\n';
+            }
+
+            output.textContent = logText + '\n' + output.textContent;
+        }
+
+        function handleError(error) {
+            log('❌ Error:', error);
+            console.error(error);
+        }
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/auth/status', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                log('✅ Auth Status:', data);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        async function syncEmployees() {
+            log('🔄 Syncing employees from Workspace...');
+            try {
+                const response = await fetch('/api/employees/sync', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    log('✅ Sync Complete:', data);
+                } else {
+                    log('❌ Sync Failed:', data);
+                }
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        async function listAllEmployees() {
+            try {
+                const response = await fetch('/api/employees/', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                log(`✅ Found ${data.length} employees:`, data);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        async function getMyProfile() {
+            try {
+                const response = await fetch('/api/employees/me', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                log('✅ My Profile:', data);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        async function getVacationSummary() {
+            try {
+                const response = await fetch('/api/timeoff/vacation-summary', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                log('✅ Vacation Summary:', data);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        async function getMyRequests() {
+            try {
+                const response = await fetch('/api/timeoff/requests/my', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                log(`✅ My Requests (${data.length} total):`, data);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        async function getPendingApprovals() {
+            try {
+                const response = await fetch('/api/timeoff/requests/pending-approval', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                log(`✅ Pending Approvals (${data.length} total):`, data);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        async function createTimeoffRequest() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const timeoffType = document.getElementById('timeoffType').value;
+            const notes = document.getElementById('notes').value;
+
+            if (!startDate || !endDate) {
+                alert('Please select start and end dates');
+                return;
+            }
+
+            log('📝 Creating time-off request...');
+            try {
+                const response = await fetch('/api/timeoff/requests', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        start_date: startDate,
+                        end_date: endDate,
+                        timeoff_type: timeoffType,
+                        notes: notes
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    log('✅ Request Created:', data);
+                    // Clear form
+                    document.getElementById('notes').value = '';
+                } else {
+                    log('❌ Request Failed:', data);
+                }
+            } catch (error) {
+                handleError(error);
+            }
+        }
+
+        // Check auth status on page load
+        window.addEventListener('load', () => {
+            log('🚀 Employee Portal Test Interface Ready');
+            checkAuthStatus();
+        });
+    </script>
+</body>
+</html>

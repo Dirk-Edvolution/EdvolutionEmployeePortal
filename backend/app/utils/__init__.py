@@ -7,6 +7,7 @@ from .auth import (
     get_current_user_email,
     is_admin,
 )
+from .audit import log_action
 
 __all__ = [
     'create_oauth_flow',
@@ -16,4 +17,5 @@ __all__ = [
     'admin_required',
     'get_current_user_email',
     'is_admin',
+    'log_action',
 ]

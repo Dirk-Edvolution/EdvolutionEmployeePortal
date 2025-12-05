@@ -21,7 +21,11 @@
       "Bash(python -m json.tool:*)",
       "Bash(npm run dev:*)",
       "Bash(git push:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(python3:*)",
+      "Bash(python debug_approval.py:*)",
+      "Bash(python:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,7 +4,7 @@ Main Flask application for Employee Portal
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from backend.config.settings import FLASK_SECRET_KEY, FLASK_ENV
-from backend.app.api import auth_bp, employee_bp, timeoff_bp
+from backend.app.api import auth_bp, employee_bp, timeoff_bp, audit_bp
 import os
 
 
@@ -30,6 +30,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(employee_bp)
     app.register_blueprint(timeoff_bp)
+    app.register_blueprint(audit_bp)
 
     # Health check endpoint
     @app.route('/health')

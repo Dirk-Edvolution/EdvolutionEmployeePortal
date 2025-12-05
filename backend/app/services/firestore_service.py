@@ -9,7 +9,7 @@ from backend.config.settings import (
     EMPLOYEES_COLLECTION,
     TIMEOFF_REQUESTS_COLLECTION,
 )
-from backend.app.models import Employee, TimeOffRequest
+from backend.app.models import Employee, TimeOffRequest, AuditLog
 
 
 class FirestoreService:
@@ -19,6 +19,7 @@ class FirestoreService:
         self.db = firestore.Client(project=GCP_PROJECT_ID)
         self.employees_ref = self.db.collection(EMPLOYEES_COLLECTION)
         self.timeoff_ref = self.db.collection(TIMEOFF_REQUESTS_COLLECTION)
+        self.audit_log_ref = self.db.collection('audit_logs')
 
     # Employee operations
     def get_employee(self, email: str) -> Optional[Employee]:
@@ -140,3 +141,57 @@ class FirestoreService:
                 total_days += req.days_count
 
         return total_days
+
+    # Audit Log operations
+    def create_audit_log(self, audit_log: AuditLog) -> str:
+        """Create new audit log entry"""
+        doc_ref = self.audit_log_ref.document()
+        doc_ref.set(audit_log.to_dict())
+        return doc_ref.id
+
+    def get_audit_logs(
+        self,
+        user_email: Optional[str] = None,
+        resource_type: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        action: Optional[str] = None,
+        limit: int = 100,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> List[tuple[str, AuditLog]]:
+        """
+        Get audit logs with optional filters
+
+        Returns list of tuples (log_id, AuditLog)
+        """
+        query = self.audit_log_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
+
+        if user_email:
+            query = query.where('user_email', '==', user_email)
+        if resource_type:
+            query = query.where('resource_type', '==', resource_type)
+        if resource_id:
+            query = query.where('resource_id', '==', resource_id)
+        if action:
+            query = query.where('action', '==', action)
+        if start_date:
+            query = query.where('timestamp', '>=', start_date.isoformat())
+        if end_date:
+            query = query.where('timestamp', '<=', end_date.isoformat())
+
+        query = query.limit(limit)
+
+        logs = []
+        for doc in query.stream():
+            logs.append((doc.id, AuditLog.from_dict(doc.id, doc.to_dict())))
+
+        return logs
+
+    def get_resource_audit_trail(self, resource_type: str, resource_id: str) -> List[AuditLog]:
+        """Get complete audit trail for a specific resource"""
+        logs = self.get_audit_logs(
+            resource_type=resource_type,
+            resource_id=resource_id,
+            limit=1000
+        )
+        return [log for _, log in logs]

@@ -5,8 +5,8 @@ from flask import Blueprint, jsonify, request
 from datetime import datetime, date
 from backend.app.utils.auth import login_required, get_current_user_email, is_admin
 from backend.app.services import FirestoreService, CalendarService, GmailService, NotificationService
-from backend.app.models import TimeOffRequest, TimeOffType, ApprovalStatus
-from backend.app.utils import get_credentials_from_session
+from backend.app.models import TimeOffRequest, TimeOffType, ApprovalStatus, AuditAction
+from backend.app.utils import get_credentials_from_session, log_action
 from backend.config.settings import ADMIN_USERS
 import logging
 

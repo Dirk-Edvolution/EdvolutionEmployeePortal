@@ -8,7 +8,14 @@
       "Bash(pkill:*)",
       "Bash(gcloud iam service-accounts list:*)",
       "Bash(gcloud storage buckets list:*)",
-      "Bash(gcloud projects get-iam-policy:*)"
+      "Bash(gcloud projects get-iam-policy:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(gcloud services:*)",
+      "Bash(gcloud storage buckets get-iam-policy:*)",
+      "Bash(gcloud projects add-iam-policy-binding:*)"
     ],
     "deny": [],
     "ask": []

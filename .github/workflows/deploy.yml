@@ -41,6 +41,7 @@ jobs:
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --source . \
             --platform managed \
+            --service-account employee-portal-runtime@edvolution-admon.iam.gserviceaccount.com \
             --region ${{ env.REGION }} \
             --allow-unauthenticated \
             --memory 512Mi \

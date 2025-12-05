@@ -36,6 +36,7 @@ echo "🚢 Deploying to Cloud Run..."
 gcloud run deploy $SERVICE_NAME \
   --image $IMAGE_URL \
   --platform managed \
+  --service-account employee-portal-runtime@edvolution-admon.iam.gserviceaccount.com \
   --region $REGION \
   --allow-unauthenticated \
   --memory 512Mi \

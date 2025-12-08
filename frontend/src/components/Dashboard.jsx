@@ -766,40 +766,40 @@ export default function Dashboard({ user, onLogout }) {
                 <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
                   <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header-nav" style={{
-                      display: 'flex',
+                      display: 'grid',
+                      gridTemplateColumns: '70px 1fr auto',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
+                      gap: '1rem',
                       marginBottom: '1rem',
                       paddingBottom: '1rem',
                       borderBottom: '1px solid #e0e0e0'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '0 0 auto' }}>
-                        <button
-                          type="button"
-                          onClick={goToPrevious}
-                          disabled={!hasPrevious || loading}
-                          className="nav-btn"
-                          style={{
-                            width: '70px',
-                            padding: '8px 12px',
-                            background: hasPrevious ? '#667eea' : '#ccc',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: hasPrevious ? 'pointer' : 'not-allowed',
-                            fontSize: '14px',
-                            flexShrink: 0
-                          }}
-                          title="Previous Employee"
-                        >
-                          ← Prev
-                        </button>
-                      </div>
+                      {/* Left: Prev button - fixed 70px */}
+                      <button
+                        type="button"
+                        onClick={goToPrevious}
+                        disabled={!hasPrevious || loading}
+                        className="nav-btn"
+                        style={{
+                          width: '70px',
+                          padding: '8px 12px',
+                          background: hasPrevious ? '#667eea' : '#ccc',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: hasPrevious ? 'pointer' : 'not-allowed',
+                          fontSize: '14px'
+                        }}
+                        title="Previous Employee"
+                      >
+                        ← Prev
+                      </button>
+
+                      {/* Center: Name - flexible but contained */}
                       <div style={{
-                        flex: '1 1 auto',
                         textAlign: 'center',
                         overflow: 'hidden',
-                        padding: '0 1rem'
+                        minWidth: 0
                       }}>
                         <h2 style={{
                           margin: 0,
@@ -813,7 +813,9 @@ export default function Dashboard({ user, onLogout }) {
                           {currentIndex + 1} of {filteredEmployees.length}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '0 0 auto' }}>
+
+                      {/* Right: Navigation buttons - auto width, always same position */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <button
                           type="button"
                           onClick={goToNext}
@@ -827,8 +829,7 @@ export default function Dashboard({ user, onLogout }) {
                             border: 'none',
                             borderRadius: '4px',
                             cursor: hasNext ? 'pointer' : 'not-allowed',
-                            fontSize: '14px',
-                            flexShrink: 0
+                            fontSize: '14px'
                           }}
                           title="Next Employee"
                         >
@@ -840,15 +841,14 @@ export default function Dashboard({ user, onLogout }) {
                           disabled={!hasPrevious || loading}
                           className="save-nav-btn"
                           style={{
-                            width: '120px',
-                            padding: '8px 12px',
+                            width: '110px',
+                            padding: '8px 10px',
                             background: hasPrevious ? '#28a745' : '#ccc',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: hasPrevious ? 'pointer' : 'not-allowed',
-                            fontSize: '14px',
-                            flexShrink: 0
+                            fontSize: '13px'
                           }}
                           title="Save and go to Previous"
                         >
@@ -860,15 +860,14 @@ export default function Dashboard({ user, onLogout }) {
                           disabled={!hasNext || loading}
                           className="save-nav-btn"
                           style={{
-                            width: '120px',
-                            padding: '8px 12px',
+                            width: '110px',
+                            padding: '8px 10px',
                             background: hasNext ? '#28a745' : '#ccc',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: hasNext ? 'pointer' : 'not-allowed',
-                            fontSize: '14px',
-                            flexShrink: 0
+                            fontSize: '13px'
                           }}
                           title="Save and go to Next"
                         >
@@ -1187,78 +1186,80 @@ export default function Dashboard({ user, onLogout }) {
                       </div>
                     </form>
                   </div>
-                </div>
+                </div >
               )
             })()}
 
-            {editingRequest && (
-              <div className="modal-overlay" onClick={() => setEditingRequest(null)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                  <h2>Edit Time-off Request</h2>
-                  <form onSubmit={(e) => {
-                    e.preventDefault()
-                    const formData = new FormData(e.target)
-                    handleUpdateRequest(editingRequest.id, {
-                      start_date: formData.get('start_date'),
-                      end_date: formData.get('end_date'),
-                      timeoff_type: formData.get('timeoff_type'),
-                      notes: formData.get('notes')
-                    })
-                  }}>
-                    <div className="form-group">
-                      <label>Start Date</label>
-                      <input
-                        type="date"
-                        name="start_date"
-                        defaultValue={editingRequest.start_date}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>End Date</label>
-                      <input
-                        type="date"
-                        name="end_date"
-                        defaultValue={editingRequest.end_date}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Type</label>
-                      <select name="timeoff_type" defaultValue={editingRequest.timeoff_type} required>
-                        <option value="vacation">Vacation</option>
-                        <option value="sick_leave">Sick Leave</option>
-                        <option value="day_off">Day Off</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Notes (optional)</label>
-                      <textarea
-                        name="notes"
-                        rows="4"
-                        defaultValue={editingRequest.notes || ''}
-                        placeholder="Any additional information..."
-                      ></textarea>
-                    </div>
-                    <div className="modal-actions">
-                      <button type="submit" className="submit-btn" disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Changes'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingRequest(null)}
-                        className="cancel-btn"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
+            {
+              editingRequest && (
+                <div className="modal-overlay" onClick={() => setEditingRequest(null)}>
+                  <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <h2>Edit Time-off Request</h2>
+                    <form onSubmit={(e) => {
+                      e.preventDefault()
+                      const formData = new FormData(e.target)
+                      handleUpdateRequest(editingRequest.id, {
+                        start_date: formData.get('start_date'),
+                        end_date: formData.get('end_date'),
+                        timeoff_type: formData.get('timeoff_type'),
+                        notes: formData.get('notes')
+                      })
+                    }}>
+                      <div className="form-group">
+                        <label>Start Date</label>
+                        <input
+                          type="date"
+                          name="start_date"
+                          defaultValue={editingRequest.start_date}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>End Date</label>
+                        <input
+                          type="date"
+                          name="end_date"
+                          defaultValue={editingRequest.end_date}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Type</label>
+                        <select name="timeoff_type" defaultValue={editingRequest.timeoff_type} required>
+                          <option value="vacation">Vacation</option>
+                          <option value="sick_leave">Sick Leave</option>
+                          <option value="day_off">Day Off</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Notes (optional)</label>
+                        <textarea
+                          name="notes"
+                          rows="4"
+                          defaultValue={editingRequest.notes || ''}
+                          placeholder="Any additional information..."
+                        ></textarea>
+                      </div>
+                      <div className="modal-actions">
+                        <button type="submit" className="submit-btn" disabled={loading}>
+                          {loading ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingRequest(null)}
+                          className="cancel-btn"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )
+            }
+          </div >
         )}
-      </main>
-    </div>
+      </main >
+    </div >
   )
 }

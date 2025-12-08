@@ -458,42 +458,42 @@ export default function Dashboard({ user, onLogout }) {
                     return matchesSearch && matchesDept;
                   })
                   .map((emp) => (
-                  <div key={emp.email} className="employee-card">
-                    <div className="employee-info">
-                      <strong>{emp.display_name || emp.full_name || emp.email}</strong>
-                      {emp.job_title && <span className="job-title">{emp.job_title}</span>}
+                    <div key={emp.email} className="employee-card">
+                      <div className="employee-info">
+                        <strong>{emp.display_name || emp.full_name || emp.email}</strong>
+                        {emp.job_title && <span className="job-title">{emp.job_title}</span>}
+                      </div>
+                      <div className="employee-details">
+                        <div className="detail-row">
+                          <span className="detail-label">Organization:</span>
+                          <span>{emp.organizational_unit || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Department:</span>
+                          <span>{emp.department || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Location:</span>
+                          <span>{emp.location || emp.country || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Country:</span>
+                          <span>{emp.country || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Region:</span>
+                          <span>{emp.region || 'Not set'}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setEditingEmployee(emp)}
+                        className="edit-btn"
+                        disabled={loading}
+                      >
+                        👁️ View
+                      </button>
                     </div>
-                    <div className="employee-details">
-                      <div className="detail-row">
-                        <span className="detail-label">Organization:</span>
-                        <span>{emp.organizational_unit || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Department:</span>
-                        <span>{emp.department || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Location:</span>
-                        <span>{emp.location || emp.country || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Country:</span>
-                        <span>{emp.country || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Region:</span>
-                        <span>{emp.region || 'Not set'}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setEditingEmployee(emp)}
-                      className="edit-btn"
-                      disabled={loading}
-                    >
-                      👁️ View
-                    </button>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 
@@ -645,368 +645,529 @@ export default function Dashboard({ user, onLogout }) {
                     return matchesSearch && matchesDept;
                   })
                   .map((emp) => (
-                  <div key={emp.email} className="employee-card">
-                    <div className="employee-info">
-                      <strong>{emp.display_name || emp.full_name || emp.email}</strong>
-                      {emp.job_title && <span className="job-title">{emp.job_title}</span>}
+                    <div key={emp.email} className="employee-card">
+                      <div className="employee-info">
+                        <strong>{emp.display_name || emp.full_name || emp.email}</strong>
+                        {emp.job_title && <span className="job-title">{emp.job_title}</span>}
+                      </div>
+                      <div className="employee-details">
+                        <div className="detail-row">
+                          <span className="detail-label">Manager:</span>
+                          <span>{emp.manager_email || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Organization:</span>
+                          <span>{emp.organizational_unit || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Department:</span>
+                          <span>{emp.department || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Location:</span>
+                          <span>{emp.location || emp.country || 'Not set'}</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Vacation Days:</span>
+                          <span>{emp.vacation_days_per_year || 20} days/year</span>
+                        </div>
+                        <div className="detail-row">
+                          <span className="detail-label">Admin:</span>
+                          <span className={emp.is_admin ? 'badge-yes' : 'badge-no'}>
+                            {emp.is_admin ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setEditingEmployee(emp)}
+                        className="edit-btn"
+                        disabled={loading}
+                      >
+                        ✏️ Edit
+                      </button>
                     </div>
-                    <div className="employee-details">
-                      <div className="detail-row">
-                        <span className="detail-label">Manager:</span>
-                        <span>{emp.manager_email || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Organization:</span>
-                        <span>{emp.organizational_unit || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Department:</span>
-                        <span>{emp.department || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Location:</span>
-                        <span>{emp.location || emp.country || 'Not set'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Vacation Days:</span>
-                        <span>{emp.vacation_days_per_year || 20} days/year</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Admin:</span>
-                        <span className={emp.is_admin ? 'badge-yes' : 'badge-no'}>
-                          {emp.is_admin ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setEditingEmployee(emp)}
-                      className="edit-btn"
-                      disabled={loading}
-                    >
-                      ✏️ Edit
-                    </button>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 
-            {editingEmployee && (
-              <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
-                <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
-                  <h2>Edit Employee: {editingEmployee.full_name || editingEmployee.email}</h2>
-                  <form onSubmit={(e) => {
-                    e.preventDefault()
-                    const formData = new FormData(e.target)
-                    const updates = {
-                      manager_email: formData.get('manager_email') || null,
-                      department: formData.get('department'),
-                      job_title: formData.get('job_title'),
-                      location: formData.get('location'),
-                      country: formData.get('country'),
-                      region: formData.get('region'),
-                      vacation_days_per_year: parseInt(formData.get('vacation_days_per_year')),
-                      contract_type: formData.get('contract_type'),
-                      contract_start_date: formData.get('contract_start_date') || null,
-                      contract_end_date: formData.get('contract_end_date') || null,
-                      contract_document_url: formData.get('contract_document_url') || null,
-                      salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
-                      salary_currency: formData.get('salary_currency'),
-                      has_bonus: formData.get('has_bonus') === 'on',
-                      bonus_type: formData.get('bonus_type') || null,
-                      bonus_percentage: formData.get('bonus_percentage') ? parseFloat(formData.get('bonus_percentage')) : null,
-                      has_commission: formData.get('has_commission') === 'on',
-                      commission_notes: formData.get('commission_notes') || null,
-                      personal_address: formData.get('personal_address') || null,
-                      working_address: formData.get('working_address') || null,
-                      spouse_partner_name: formData.get('spouse_partner_name') || null,
-                      spouse_partner_phone: formData.get('spouse_partner_phone') || null,
-                      spouse_partner_email: formData.get('spouse_partner_email') || null,
+            {editingEmployee && (() => {
+              // Get filtered employees list for navigation
+              const filteredEmployees = employees.filter(emp => {
+                const matchesSearch = !searchTerm ||
+                  emp.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesDept = !filterDepartment || emp.department === filterDepartment;
+                return matchesSearch && matchesDept;
+              });
+              const currentIndex = filteredEmployees.findIndex(e => e.email === editingEmployee.email);
+              const hasPrevious = currentIndex > 0;
+              const hasNext = currentIndex < filteredEmployees.length - 1;
+
+              const goToPrevious = () => {
+                if (hasPrevious) {
+                  setEditingEmployee(filteredEmployees[currentIndex - 1]);
+                }
+              };
+
+              const goToNext = () => {
+                if (hasNext) {
+                  setEditingEmployee(filteredEmployees[currentIndex + 1]);
+                }
+              };
+
+              const saveAndNavigate = async (direction) => {
+                const form = document.getElementById('employee-edit-form');
+                if (form) {
+                  const formData = new FormData(form);
+                  const updates = {
+                    manager_email: formData.get('manager_email') || null,
+                    department: formData.get('department'),
+                    job_title: formData.get('job_title'),
+                    location: formData.get('location'),
+                    country: formData.get('country'),
+                    region: formData.get('region'),
+                    vacation_days_per_year: parseInt(formData.get('vacation_days_per_year')),
+                    contract_type: formData.get('contract_type'),
+                    contract_start_date: formData.get('contract_start_date') || null,
+                    contract_end_date: formData.get('contract_end_date') || null,
+                    contract_document_url: formData.get('contract_document_url') || null,
+                    salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
+                    salary_currency: formData.get('salary_currency'),
+                    has_bonus: formData.get('has_bonus') === 'on',
+                    bonus_type: formData.get('bonus_type') || null,
+                    bonus_percentage: formData.get('bonus_percentage') ? parseFloat(formData.get('bonus_percentage')) : null,
+                    has_commission: formData.get('has_commission') === 'on',
+                    commission_notes: formData.get('commission_notes') || null,
+                    personal_address: formData.get('personal_address') || null,
+                    working_address: formData.get('working_address') || null,
+                    spouse_partner_name: formData.get('spouse_partner_name') || null,
+                    spouse_partner_phone: formData.get('spouse_partner_phone') || null,
+                    spouse_partner_email: formData.get('spouse_partner_email') || null,
+                  };
+                  setLoading(true);
+                  try {
+                    await employeeAPI.update(editingEmployee.email, updates);
+                    showMessage('Employee updated successfully!');
+                    await loadEmployees();
+                    if (direction === 'next' && hasNext) {
+                      setEditingEmployee(filteredEmployees[currentIndex + 1]);
+                    } else if (direction === 'previous' && hasPrevious) {
+                      setEditingEmployee(filteredEmployees[currentIndex - 1]);
                     }
-                    handleUpdateEmployee(editingEmployee.email, updates)
-                  }}>
-                    <h3 style={{ marginTop: '1rem', marginBottom: '0.5rem', color: '#667eea' }}>Basic Information</h3>
-                    <div className="form-group">
-                      <label>Manager</label>
-                      <select name="manager_email" defaultValue={editingEmployee.manager_email || ''}>
-                        <option value="">No Manager</option>
-                        {employees
-                          .filter(e => e.email !== editingEmployee.email)
-                          .map(e => (
-                            <option key={e.email} value={e.email}>{e.full_name || e.email}</option>
-                          ))
-                        }
-                      </select>
+                  } catch (error) {
+                    showMessage('Failed to update employee: ' + error.message, 'error');
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+              };
+
+              return (
+                <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
+                  <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-header-nav" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '1rem',
+                      paddingBottom: '1rem',
+                      borderBottom: '1px solid #e0e0e0'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <button
+                          type="button"
+                          onClick={goToPrevious}
+                          disabled={!hasPrevious || loading}
+                          className="nav-btn"
+                          style={{
+                            padding: '8px 12px',
+                            background: hasPrevious ? '#667eea' : '#ccc',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: hasPrevious ? 'pointer' : 'not-allowed',
+                            fontSize: '14px'
+                          }}
+                          title="Previous Employee"
+                        >
+                          ← Prev
+                        </button>
+                        <h2 style={{ margin: 0 }}>{editingEmployee.full_name || editingEmployee.email}</h2>
+                        <button
+                          type="button"
+                          onClick={goToNext}
+                          disabled={!hasNext || loading}
+                          className="nav-btn"
+                          style={{
+                            padding: '8px 12px',
+                            background: hasNext ? '#667eea' : '#ccc',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: hasNext ? 'pointer' : 'not-allowed',
+                            fontSize: '14px'
+                          }}
+                          title="Next Employee"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '12px', color: '#666' }}>
+                          {currentIndex + 1} of {filteredEmployees.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => saveAndNavigate('previous')}
+                          disabled={!hasPrevious || loading}
+                          className="save-nav-btn"
+                          style={{
+                            padding: '8px 12px',
+                            background: hasPrevious ? '#28a745' : '#ccc',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: hasPrevious ? 'pointer' : 'not-allowed',
+                            fontSize: '14px'
+                          }}
+                          title="Save and go to Previous"
+                        >
+                          💾 ← Save & Prev
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveAndNavigate('next')}
+                          disabled={!hasNext || loading}
+                          className="save-nav-btn"
+                          style={{
+                            padding: '8px 12px',
+                            background: hasNext ? '#28a745' : '#ccc',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: hasNext ? 'pointer' : 'not-allowed',
+                            fontSize: '14px'
+                          }}
+                          title="Save and go to Next"
+                        >
+                          Save & Next → 💾
+                        </button>
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label>Organizational Unit</label>
-                      <select
-                        name="ou_type"
-                        defaultValue={
-                          editingEmployee.organizational_unit === 'Employees' ? 'employees' :
-                          editingEmployee.organizational_unit === 'External' ? 'external' :
-                          editingEmployee.organizational_unit === 'Others' ? 'others' :
-                          'employees'
-                        }
-                        onChange={async (e) => {
-                          if (confirm(`Move ${editingEmployee.email} to /${e.target.options[e.target.selectedIndex].text} in Google Workspace?`)) {
-                            try {
-                              setLoading(true)
-                              await employeeAPI.changeOU(editingEmployee.email, e.target.value)
-                              showMessage(`Successfully moved to /${e.target.options[e.target.selectedIndex].text}`)
-                              await loadEmployees()
-                              setEditingEmployee(null)
-                            } catch (error) {
-                              showMessage('Failed to change OU: ' + error.message, 'error')
-                            } finally {
-                              setLoading(false)
-                            }
-                          } else {
-                            e.target.value = e.target.defaultValue
+                    <form id="employee-edit-form" onSubmit={(e) => {
+                      e.preventDefault()
+                      const formData = new FormData(e.target)
+                      const updates = {
+                        manager_email: formData.get('manager_email') || null,
+                        department: formData.get('department'),
+                        job_title: formData.get('job_title'),
+                        location: formData.get('location'),
+                        country: formData.get('country'),
+                        region: formData.get('region'),
+                        vacation_days_per_year: parseInt(formData.get('vacation_days_per_year')),
+                        contract_type: formData.get('contract_type'),
+                        contract_start_date: formData.get('contract_start_date') || null,
+                        contract_end_date: formData.get('contract_end_date') || null,
+                        contract_document_url: formData.get('contract_document_url') || null,
+                        salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
+                        salary_currency: formData.get('salary_currency'),
+                        has_bonus: formData.get('has_bonus') === 'on',
+                        bonus_type: formData.get('bonus_type') || null,
+                        bonus_percentage: formData.get('bonus_percentage') ? parseFloat(formData.get('bonus_percentage')) : null,
+                        has_commission: formData.get('has_commission') === 'on',
+                        commission_notes: formData.get('commission_notes') || null,
+                        personal_address: formData.get('personal_address') || null,
+                        working_address: formData.get('working_address') || null,
+                        spouse_partner_name: formData.get('spouse_partner_name') || null,
+                        spouse_partner_phone: formData.get('spouse_partner_phone') || null,
+                        spouse_partner_email: formData.get('spouse_partner_email') || null,
+                      }
+                      handleUpdateEmployee(editingEmployee.email, updates)
+                    }}>
+                      <h3 style={{ marginTop: '1rem', marginBottom: '0.5rem', color: '#667eea' }}>Basic Information</h3>
+                      <div className="form-group">
+                        <label>Manager</label>
+                        <select name="manager_email" defaultValue={editingEmployee.manager_email || ''}>
+                          <option value="">No Manager</option>
+                          {employees
+                            .filter(e => e.email !== editingEmployee.email)
+                            .map(e => (
+                              <option key={e.email} value={e.email}>{e.full_name || e.email}</option>
+                            ))
                           }
-                        }}
-                      >
-                        <option value="employees">Employees</option>
-                        <option value="external">External</option>
-                        <option value="others">Others</option>
-                      </select>
-                      <small style={{ color: '#666', fontSize: '12px' }}>
-                        Changes the user's Organizational Unit in Google Workspace immediately.
-                        <br/>Current: /{editingEmployee.organizational_unit || 'Unknown'}
-                      </small>
-                    </div>
-                    <div className="form-group">
-                      <label>Department / Team</label>
-                      <input
-                        type="text"
-                        name="department"
-                        defaultValue={editingEmployee.department || ''}
-                        placeholder="e.g., Backend Team, Customer Success, Product Design"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Job Title</label>
-                      <input
-                        type="text"
-                        name="job_title"
-                        defaultValue={editingEmployee.job_title || ''}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Location</label>
-                      <input
-                        type="text"
-                        name="location"
-                        defaultValue={editingEmployee.location || ''}
-                        placeholder="e.g., New York Office, Remote"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Country</label>
-                      <input
-                        type="text"
-                        name="country"
-                        defaultValue={editingEmployee.country || ''}
-                        placeholder="e.g., United States"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Region</label>
-                      <input
-                        type="text"
-                        name="region"
-                        defaultValue={editingEmployee.region || ''}
-                        placeholder="e.g., North America, EMEA, APAC"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Vacation Days Per Year</label>
-                      <input
-                        type="number"
-                        name="vacation_days_per_year"
-                        defaultValue={editingEmployee.vacation_days_per_year || 20}
-                        min="0"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>HR Admin Status</label>
-                      <input
-                        type="text"
-                        value={editingEmployee.is_admin ? 'Yes - HR Admin' : 'No - Regular Employee'}
-                        disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
-                      />
-                      <small style={{ color: '#666', fontSize: '12px' }}>Admin status is controlled by the ADMIN_USERS environment variable and cannot be changed here.</small>
-                    </div>
-
-                    <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Contract Information</h3>
-                    <div className="form-group">
-                      <label>Contract Type</label>
-                      <select name="contract_type" defaultValue={editingEmployee.contract_type || ''}>
-                        <option value="">Not set</option>
-                        <option value="permanent">Permanent</option>
-                        <option value="temporary">Temporary</option>
-                        <option value="contractor">Contractor</option>
-                        <option value="intern">Intern</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Contract Start Date</label>
-                      <input
-                        type="date"
-                        name="contract_start_date"
-                        defaultValue={editingEmployee.contract_start_date || ''}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Contract End Date</label>
-                      <input
-                        type="date"
-                        name="contract_end_date"
-                        defaultValue={editingEmployee.contract_end_date || ''}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Contract Document URL (Google Drive)</label>
-                      <input
-                        type="url"
-                        name="contract_document_url"
-                        defaultValue={editingEmployee.contract_document_url || ''}
-                        placeholder="https://drive.google.com/..."
-                      />
-                    </div>
-
-                    <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Compensation</h3>
-                    <div className="form-group">
-                      <label>Salary</label>
-                      <input
-                        type="number"
-                        name="salary"
-                        step="0.01"
-                        defaultValue={editingEmployee.salary || ''}
-                        placeholder="e.g., 75000"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Currency</label>
-                      <select name="salary_currency" defaultValue={editingEmployee.salary_currency || 'USD'}>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                        <option value="CAD">CAD</option>
-                        <option value="AUD">AUD</option>
-                        <option value="MXN">MXN</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Organizational Unit</label>
+                        <select
+                          name="ou_type"
+                          defaultValue={
+                            editingEmployee.organizational_unit === 'Employees' ? 'employees' :
+                              editingEmployee.organizational_unit === 'External' ? 'external' :
+                                editingEmployee.organizational_unit === 'Others' ? 'others' :
+                                  'employees'
+                          }
+                          onChange={async (e) => {
+                            if (confirm(`Move ${editingEmployee.email} to /${e.target.options[e.target.selectedIndex].text} in Google Workspace?`)) {
+                              try {
+                                setLoading(true)
+                                await employeeAPI.changeOU(editingEmployee.email, e.target.value)
+                                showMessage(`Successfully moved to /${e.target.options[e.target.selectedIndex].text}`)
+                                await loadEmployees()
+                                setEditingEmployee(null)
+                              } catch (error) {
+                                showMessage('Failed to change OU: ' + error.message, 'error')
+                              } finally {
+                                setLoading(false)
+                              }
+                            } else {
+                              e.target.value = e.target.defaultValue
+                            }
+                          }}
+                        >
+                          <option value="employees">Employees</option>
+                          <option value="external">External</option>
+                          <option value="others">Others</option>
+                        </select>
+                        <small style={{ color: '#666', fontSize: '12px' }}>
+                          Changes the user's Organizational Unit in Google Workspace immediately.
+                          <br />Current: /{editingEmployee.organizational_unit || 'Unknown'}
+                        </small>
+                      </div>
+                      <div className="form-group">
+                        <label>Department / Team</label>
                         <input
-                          type="checkbox"
-                          name="has_bonus"
-                          defaultChecked={editingEmployee.has_bonus}
+                          type="text"
+                          name="department"
+                          defaultValue={editingEmployee.department || ''}
+                          placeholder="e.g., Backend Team, Customer Success, Product Design"
                         />
-                        Has Bonus
-                      </label>
-                    </div>
-                    <div className="form-group">
-                      <label>Bonus Type</label>
-                      <select name="bonus_type" defaultValue={editingEmployee.bonus_type || ''}>
-                        <option value="">Not applicable</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="annual">Annual</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Bonus Percentage</label>
-                      <input
-                        type="number"
-                        name="bonus_percentage"
-                        step="0.1"
-                        defaultValue={editingEmployee.bonus_percentage || ''}
-                        placeholder="e.g., 10 for 10%"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>
+                      </div>
+                      <div className="form-group">
+                        <label>Job Title</label>
                         <input
-                          type="checkbox"
-                          name="has_commission"
-                          defaultChecked={editingEmployee.has_commission}
+                          type="text"
+                          name="job_title"
+                          defaultValue={editingEmployee.job_title || ''}
                         />
-                        Has Commission
-                      </label>
-                    </div>
-                    <div className="form-group">
-                      <label>Commission Notes</label>
-                      <textarea
-                        name="commission_notes"
-                        rows="3"
-                        defaultValue={editingEmployee.commission_notes || ''}
-                        placeholder="Details about commission structure..."
-                      ></textarea>
-                    </div>
+                      </div>
+                      <div className="form-group">
+                        <label>Location</label>
+                        <input
+                          type="text"
+                          name="location"
+                          defaultValue={editingEmployee.location || ''}
+                          placeholder="e.g., New York Office, Remote"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Country</label>
+                        <input
+                          type="text"
+                          name="country"
+                          defaultValue={editingEmployee.country || ''}
+                          placeholder="e.g., United States"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Region</label>
+                        <input
+                          type="text"
+                          name="region"
+                          defaultValue={editingEmployee.region || ''}
+                          placeholder="e.g., North America, EMEA, APAC"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Vacation Days Per Year</label>
+                        <input
+                          type="number"
+                          name="vacation_days_per_year"
+                          defaultValue={editingEmployee.vacation_days_per_year || 20}
+                          min="0"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>HR Admin Status</label>
+                        <input
+                          type="text"
+                          value={editingEmployee.is_admin ? 'Yes - HR Admin' : 'No - Regular Employee'}
+                          disabled
+                          style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
+                        />
+                        <small style={{ color: '#666', fontSize: '12px' }}>Admin status is controlled by the ADMIN_USERS environment variable and cannot be changed here.</small>
+                      </div>
 
-                    <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Addresses</h3>
-                    <div className="form-group">
-                      <label>Personal Address</label>
-                      <textarea
-                        name="personal_address"
-                        rows="2"
-                        defaultValue={editingEmployee.personal_address || ''}
-                        placeholder="Home address..."
-                      ></textarea>
-                    </div>
-                    <div className="form-group">
-                      <label>Working Address</label>
-                      <textarea
-                        name="working_address"
-                        rows="2"
-                        defaultValue={editingEmployee.working_address || ''}
-                        placeholder="Office or working location address..."
-                      ></textarea>
-                    </div>
+                      <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Contract Information</h3>
+                      <div className="form-group">
+                        <label>Contract Type</label>
+                        <select name="contract_type" defaultValue={editingEmployee.contract_type || ''}>
+                          <option value="">Not set</option>
+                          <option value="permanent">Permanent</option>
+                          <option value="temporary">Temporary</option>
+                          <option value="contractor">Contractor</option>
+                          <option value="intern">Intern</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Contract Start Date</label>
+                        <input
+                          type="date"
+                          name="contract_start_date"
+                          defaultValue={editingEmployee.contract_start_date || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Contract End Date</label>
+                        <input
+                          type="date"
+                          name="contract_end_date"
+                          defaultValue={editingEmployee.contract_end_date || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Contract Document URL (Google Drive)</label>
+                        <input
+                          type="url"
+                          name="contract_document_url"
+                          defaultValue={editingEmployee.contract_document_url || ''}
+                          placeholder="https://drive.google.com/..."
+                        />
+                      </div>
 
-                    <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Emergency Contact</h3>
-                    <div className="form-group">
-                      <label>Spouse/Partner Name</label>
-                      <input
-                        type="text"
-                        name="spouse_partner_name"
-                        defaultValue={editingEmployee.spouse_partner_name || ''}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Spouse/Partner Phone</label>
-                      <input
-                        type="tel"
-                        name="spouse_partner_phone"
-                        defaultValue={editingEmployee.spouse_partner_phone || ''}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Spouse/Partner Email</label>
-                      <input
-                        type="email"
-                        name="spouse_partner_email"
-                        defaultValue={editingEmployee.spouse_partner_email || ''}
-                      />
-                    </div>
+                      <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Compensation</h3>
+                      <div className="form-group">
+                        <label>Salary</label>
+                        <input
+                          type="number"
+                          name="salary"
+                          step="0.01"
+                          defaultValue={editingEmployee.salary || ''}
+                          placeholder="e.g., 75000"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Currency</label>
+                        <select name="salary_currency" defaultValue={editingEmployee.salary_currency || 'USD'}>
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
+                          <option value="GBP">GBP</option>
+                          <option value="CAD">CAD</option>
+                          <option value="AUD">AUD</option>
+                          <option value="MXN">MXN</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>
+                          <input
+                            type="checkbox"
+                            name="has_bonus"
+                            defaultChecked={editingEmployee.has_bonus}
+                          />
+                          Has Bonus
+                        </label>
+                      </div>
+                      <div className="form-group">
+                        <label>Bonus Type</label>
+                        <select name="bonus_type" defaultValue={editingEmployee.bonus_type || ''}>
+                          <option value="">Not applicable</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="annual">Annual</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Bonus Percentage</label>
+                        <input
+                          type="number"
+                          name="bonus_percentage"
+                          step="0.1"
+                          defaultValue={editingEmployee.bonus_percentage || ''}
+                          placeholder="e.g., 10 for 10%"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>
+                          <input
+                            type="checkbox"
+                            name="has_commission"
+                            defaultChecked={editingEmployee.has_commission}
+                          />
+                          Has Commission
+                        </label>
+                      </div>
+                      <div className="form-group">
+                        <label>Commission Notes</label>
+                        <textarea
+                          name="commission_notes"
+                          rows="3"
+                          defaultValue={editingEmployee.commission_notes || ''}
+                          placeholder="Details about commission structure..."
+                        ></textarea>
+                      </div>
 
-                    <div className="modal-actions">
-                      <button type="submit" className="submit-btn" disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Changes'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingEmployee(null)}
-                        className="cancel-btn"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
+                      <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Addresses</h3>
+                      <div className="form-group">
+                        <label>Personal Address</label>
+                        <textarea
+                          name="personal_address"
+                          rows="2"
+                          defaultValue={editingEmployee.personal_address || ''}
+                          placeholder="Home address..."
+                        ></textarea>
+                      </div>
+                      <div className="form-group">
+                        <label>Working Address</label>
+                        <textarea
+                          name="working_address"
+                          rows="2"
+                          defaultValue={editingEmployee.working_address || ''}
+                          placeholder="Office or working location address..."
+                        ></textarea>
+                      </div>
+
+                      <h3 style={{ marginTop: '1.5rem', marginBottom: '0.5rem', color: '#667eea' }}>Emergency Contact</h3>
+                      <div className="form-group">
+                        <label>Spouse/Partner Name</label>
+                        <input
+                          type="text"
+                          name="spouse_partner_name"
+                          defaultValue={editingEmployee.spouse_partner_name || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Spouse/Partner Phone</label>
+                        <input
+                          type="tel"
+                          name="spouse_partner_phone"
+                          defaultValue={editingEmployee.spouse_partner_phone || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Spouse/Partner Email</label>
+                        <input
+                          type="email"
+                          name="spouse_partner_email"
+                          defaultValue={editingEmployee.spouse_partner_email || ''}
+                        />
+                      </div>
+
+                      <div className="modal-actions">
+                        <button type="submit" className="submit-btn" disabled={loading}>
+                          {loading ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingEmployee(null)}
+                          className="cancel-btn"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             {editingRequest && (
               <div className="modal-overlay" onClick={() => setEditingRequest(null)}>

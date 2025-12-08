@@ -703,186 +703,150 @@ export default function Dashboard({ user, onLogout }) {
               const hasPrevious = currentIndex > 0;
               const hasNext = currentIndex < filteredEmployees.length - 1;
 
-              // Function to get current form values
-              const getFormValues = () => {
+              // Check if form has unsaved changes
+              const checkDirty = () => {
                 const form = document.getElementById('employee-edit-form');
-                if (!form) return null;
+                if (!form) return false;
                 const formData = new FormData(form);
-                return {
-                  manager_email: formData.get('manager_email') || '',
-                  department: formData.get('department') || '',
-                  job_title: formData.get('job_title') || '',
-                  location: formData.get('location') || '',
-                  country: formData.get('country') || '',
-                  region: formData.get('region') || '',
-                  vacation_days_per_year: formData.get('vacation_days_per_year') || '',
-                  contract_type: formData.get('contract_type') || '',
-                  contract_start_date: formData.get('contract_start_date') || '',
-                  contract_end_date: formData.get('contract_end_date') || '',
-                  contract_document_url: formData.get('contract_document_url') || '',
-                  salary: formData.get('salary') || '',
-                  salary_currency: formData.get('salary_currency') || '',
-                  has_bonus: formData.get('has_bonus') === 'on',
-                  bonus_type: formData.get('bonus_type') || '',
-                  bonus_percentage: formData.get('bonus_percentage') || '',
-                  has_commission: formData.get('has_commission') === 'on',
-                  commission_notes: formData.get('commission_notes') || '',
-                  personal_address: formData.get('personal_address') || '',
-                  working_address: formData.get('working_address') || '',
-                  spouse_partner_name: formData.get('spouse_partner_name') || '',
-                  spouse_partner_phone: formData.get('spouse_partner_phone') || '',
-                  spouse_partner_email: formData.get('spouse_partner_email') || '',
-                };
+                const orig = editingEmployee;
+
+                // Compare key fields
+                if ((formData.get('manager_email') || '') !== (orig.manager_email || '')) return true;
+                if ((formData.get('department') || '') !== (orig.department || '')) return true;
+                if ((formData.get('job_title') || '') !== (orig.job_title || '')) return true;
+                if ((formData.get('location') || '') !== (orig.location || '')) return true;
+                if ((formData.get('country') || '') !== (orig.country || '')) return true;
+                if ((formData.get('region') || '') !== (orig.region || '')) return true;
+                if (String(formData.get('vacation_days_per_year') || '20') !== String(orig.vacation_days_per_year || 20)) return true;
+                if ((formData.get('contract_type') || '') !== (orig.contract_type || '')) return true;
+                if ((formData.get('salary') || '') !== String(orig.salary || '')) return true;
+                if (formData.get('has_bonus') === 'on' !== (orig.has_bonus || false)) return true;
+                if (formData.get('has_commission') === 'on' !== (orig.has_commission || false)) return true;
+
+                return false;
               };
 
-              // Function to check if form has unsaved changes
-              const hasUnsavedChanges = () => {
-                const currentValues = getFormValues();
-                if (!currentValues) return false;
-
-                const original = editingEmployee;
-                return (
-                  (currentValues.manager_email || '') !== (original.manager_email || '') ||
-                  (currentValues.department || '') !== (original.department || '') ||
-                  (currentValues.job_title || '') !== (original.job_title || '') ||
-                  (currentValues.location || '') !== (original.location || '') ||
-                  (currentValues.country || '') !== (original.country || '') ||
-                  (currentValues.region || '') !== (original.region || '') ||
-                  String(currentValues.vacation_days_per_year || '20') !== String(original.vacation_days_per_year || '20') ||
-                  (currentValues.contract_type || '') !== (original.contract_type || '') ||
-                  (currentValues.contract_start_date || '') !== (original.contract_start_date || '') ||
-                  (currentValues.contract_end_date || '') !== (original.contract_end_date || '') ||
-                  (currentValues.contract_document_url || '') !== (original.contract_document_url || '') ||
-                  (currentValues.salary || '') !== String(original.salary || '') ||
-                  (currentValues.salary_currency || 'EUR') !== (original.salary_currency || 'EUR') ||
-                  currentValues.has_bonus !== (original.has_bonus || false) ||
-                  (currentValues.bonus_type || '') !== (original.bonus_type || '') ||
-                  (currentValues.bonus_percentage || '') !== String(original.bonus_percentage || '') ||
-                  currentValues.has_commission !== (original.has_commission || false) ||
-                  (currentValues.commission_notes || '') !== (original.commission_notes || '') ||
-                  (currentValues.personal_address || '') !== (original.personal_address || '') ||
-                  (currentValues.working_address || '') !== (original.working_address || '') ||
-                  (currentValues.spouse_partner_name || '') !== (original.spouse_partner_name || '') ||
-                  (currentValues.spouse_partner_phone || '') !== (original.spouse_partner_phone || '') ||
-                  (currentValues.spouse_partner_email || '') !== (original.spouse_partner_email || '')
-                );
+              // Navigate to another employee
+              const navigateTo = (direction) => {
+                const targetIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1;
+                if (targetIndex >= 0 && targetIndex < filteredEmployees.length) {
+                  setEditingEmployee(filteredEmployees[targetIndex]);
+                }
               };
 
-              // Navigate with unsaved changes check
-              const navigateWithCheck = async (direction) => {
-                if (hasUnsavedChanges()) {
-                  const userChoice = window.confirm(
-                    "You have unsaved changes. Click OK to SAVE and continue, or Cancel to continue WITHOUT saving."
+              // Handle navigation with dirty check
+              const handleNavigate = (direction) => {
+                if (checkDirty()) {
+                  const save = window.confirm(
+                    'You have unsaved changes!\n\nClick OK to SAVE changes first.\nClick Cancel to DISCARD changes and continue.'
                   );
-                  if (userChoice) {
-                    // User chose to save - use saveAndNavigate
-                    await saveAndNavigate(direction);
+                  if (save) {
+                    // Save first, then navigate
+                    handleSave(() => navigateTo(direction));
                     return;
                   }
-                  // User chose to continue without saving - fall through to navigate
                 }
-                // Navigate without saving
-                if (direction === 'previous' && hasPrevious) {
-                  setEditingEmployee(filteredEmployees[currentIndex - 1]);
-                } else if (direction === 'next' && hasNext) {
-                  setEditingEmployee(filteredEmployees[currentIndex + 1]);
-                }
+                navigateTo(direction);
               };
 
-              const goToPrevious = () => navigateWithCheck('previous');
-              const goToNext = () => navigateWithCheck('next');
-
-              const saveAndNavigate = async (direction) => {
+              // Save employee data
+              const handleSave = async (onSuccess) => {
                 const form = document.getElementById('employee-edit-form');
-                if (form) {
-                  const formData = new FormData(form);
-                  const updates = {
-                    manager_email: formData.get('manager_email') || null,
-                    department: formData.get('department'),
-                    job_title: formData.get('job_title'),
-                    location: formData.get('location'),
-                    country: formData.get('country'),
-                    region: formData.get('region'),
-                    vacation_days_per_year: parseInt(formData.get('vacation_days_per_year')),
-                    contract_type: formData.get('contract_type'),
-                    contract_start_date: formData.get('contract_start_date') || null,
-                    contract_end_date: formData.get('contract_end_date') || null,
-                    contract_document_url: formData.get('contract_document_url') || null,
-                    salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
-                    salary_currency: formData.get('salary_currency'),
-                    has_bonus: formData.get('has_bonus') === 'on',
-                    bonus_type: formData.get('bonus_type') || null,
-                    bonus_percentage: formData.get('bonus_percentage') ? parseFloat(formData.get('bonus_percentage')) : null,
-                    has_commission: formData.get('has_commission') === 'on',
-                    commission_notes: formData.get('commission_notes') || null,
-                    personal_address: formData.get('personal_address') || null,
-                    working_address: formData.get('working_address') || null,
-                    spouse_partner_name: formData.get('spouse_partner_name') || null,
-                    spouse_partner_phone: formData.get('spouse_partner_phone') || null,
-                    spouse_partner_email: formData.get('spouse_partner_email') || null,
-                  };
-                  setLoading(true);
-                  try {
-                    await employeeAPI.update(editingEmployee.email, updates);
-                    showMessage('Employee updated successfully!');
-                    await loadEmployees();
-                    if (direction === 'next' && hasNext) {
-                      setEditingEmployee(filteredEmployees[currentIndex + 1]);
-                    } else if (direction === 'previous' && hasPrevious) {
-                      setEditingEmployee(filteredEmployees[currentIndex - 1]);
-                    }
-                  } catch (error) {
-                    showMessage('Failed to update employee: ' + error.message, 'error');
-                  } finally {
-                    setLoading(false);
+                if (!form) return;
+
+                const formData = new FormData(form);
+                const updates = {
+                  manager_email: formData.get('manager_email') || null,
+                  department: formData.get('department'),
+                  job_title: formData.get('job_title'),
+                  location: formData.get('location'),
+                  country: formData.get('country'),
+                  region: formData.get('region'),
+                  vacation_days_per_year: parseInt(formData.get('vacation_days_per_year')) || 20,
+                  contract_type: formData.get('contract_type'),
+                  contract_start_date: formData.get('contract_start_date') || null,
+                  contract_end_date: formData.get('contract_end_date') || null,
+                  contract_document_url: formData.get('contract_document_url') || null,
+                  salary: formData.get('salary') ? parseFloat(formData.get('salary')) : null,
+                  salary_currency: formData.get('salary_currency'),
+                  has_bonus: formData.get('has_bonus') === 'on',
+                  bonus_type: formData.get('bonus_type') || null,
+                  bonus_percentage: formData.get('bonus_percentage') ? parseFloat(formData.get('bonus_percentage')) : null,
+                  has_commission: formData.get('has_commission') === 'on',
+                  commission_notes: formData.get('commission_notes') || null,
+                  personal_address: formData.get('personal_address') || null,
+                  working_address: formData.get('working_address') || null,
+                  spouse_partner_name: formData.get('spouse_partner_name') || null,
+                  spouse_partner_phone: formData.get('spouse_partner_phone') || null,
+                  spouse_partner_email: formData.get('spouse_partner_email') || null,
+                };
+
+                setLoading(true);
+                try {
+                  await employeeAPI.update(editingEmployee.email, updates);
+                  showMessage('Employee saved successfully!');
+
+                  // Refresh the employee list to get updated data
+                  const updatedEmployees = await employeeAPI.list();
+                  setEmployees(updatedEmployees);
+
+                  // Update the current editing employee with new data
+                  const updatedEmployee = updatedEmployees.find(e => e.email === editingEmployee.email);
+                  if (updatedEmployee) {
+                    setEditingEmployee(updatedEmployee);
                   }
+
+                  // Call success callback if provided (for navigation after save)
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                } catch (error) {
+                  showMessage('Failed to save: ' + error.message, 'error');
+                } finally {
+                  setLoading(false);
                 }
               };
 
               return (
                 <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
                   <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header-nav" style={{
+                    {/* Header: [PREV] {NAME} [NEXT][SAVE] */}
+                    <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '70px 1fr auto',
+                      gridTemplateColumns: '80px 1fr auto',
                       alignItems: 'center',
                       gap: '1rem',
                       marginBottom: '1rem',
                       paddingBottom: '1rem',
                       borderBottom: '1px solid #e0e0e0'
                     }}>
-                      {/* Left: Prev button - fixed 70px */}
+                      {/* Left: PREV */}
                       <button
                         type="button"
-                        onClick={goToPrevious}
+                        onClick={() => handleNavigate('previous')}
                         disabled={!hasPrevious || loading}
-                        className="nav-btn"
                         style={{
-                          width: '70px',
-                          padding: '8px 12px',
+                          padding: '10px 16px',
                           background: hasPrevious ? '#667eea' : '#ccc',
                           color: 'white',
                           border: 'none',
-                          borderRadius: '4px',
+                          borderRadius: '6px',
                           cursor: hasPrevious ? 'pointer' : 'not-allowed',
-                          fontSize: '14px'
+                          fontSize: '14px',
+                          fontWeight: '500'
                         }}
-                        title="Previous Employee"
                       >
                         ← Prev
                       </button>
 
-                      {/* Center: Name - flexible but contained */}
-                      <div style={{
-                        textAlign: 'center',
-                        overflow: 'hidden',
-                        minWidth: 0
-                      }}>
+                      {/* Center: Name + counter */}
+                      <div style={{ textAlign: 'center', overflow: 'hidden' }}>
                         <h2 style={{
                           margin: 0,
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis'
+                          textOverflow: 'ellipsis',
+                          fontSize: '1.3rem'
                         }}>
                           {editingEmployee.full_name || editingEmployee.email}
                         </h2>
@@ -891,64 +855,41 @@ export default function Dashboard({ user, onLogout }) {
                         </span>
                       </div>
 
-                      {/* Right: Navigation buttons - auto width, always same position */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {/* Right: NEXT + SAVE */}
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
                           type="button"
-                          onClick={goToNext}
+                          onClick={() => handleNavigate('next')}
                           disabled={!hasNext || loading}
-                          className="nav-btn"
                           style={{
-                            width: '70px',
-                            padding: '8px 12px',
+                            padding: '10px 16px',
                             background: hasNext ? '#667eea' : '#ccc',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '4px',
+                            borderRadius: '6px',
                             cursor: hasNext ? 'pointer' : 'not-allowed',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            fontWeight: '500'
                           }}
-                          title="Next Employee"
                         >
                           Next →
                         </button>
                         <button
                           type="button"
-                          onClick={() => saveAndNavigate('previous')}
-                          disabled={!hasPrevious || loading}
-                          className="save-nav-btn"
+                          onClick={() => handleSave()}
+                          disabled={loading}
                           style={{
-                            width: '110px',
-                            padding: '8px 10px',
-                            background: hasPrevious ? '#28a745' : '#ccc',
+                            padding: '10px 20px',
+                            background: '#28a745',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '4px',
-                            cursor: hasPrevious ? 'pointer' : 'not-allowed',
-                            fontSize: '13px'
+                            borderRadius: '6px',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500'
                           }}
-                          title="Save and go to Previous"
                         >
-                          💾 Save & Prev
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => saveAndNavigate('next')}
-                          disabled={!hasNext || loading}
-                          className="save-nav-btn"
-                          style={{
-                            width: '110px',
-                            padding: '8px 10px',
-                            background: hasNext ? '#28a745' : '#ccc',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: hasNext ? 'pointer' : 'not-allowed',
-                            fontSize: '13px'
-                          }}
-                          title="Save and go to Next"
-                        >
-                          Save & Next 💾
+                          {loading ? 'Saving...' : '💾 Save'}
                         </button>
                       </div>
                     </div>

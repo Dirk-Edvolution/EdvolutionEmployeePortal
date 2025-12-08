@@ -703,17 +703,94 @@ export default function Dashboard({ user, onLogout }) {
               const hasPrevious = currentIndex > 0;
               const hasNext = currentIndex < filteredEmployees.length - 1;
 
-              const goToPrevious = () => {
-                if (hasPrevious) {
-                  setEditingEmployee(filteredEmployees[currentIndex - 1]);
-                }
+              // Function to get current form values
+              const getFormValues = () => {
+                const form = document.getElementById('employee-edit-form');
+                if (!form) return null;
+                const formData = new FormData(form);
+                return {
+                  manager_email: formData.get('manager_email') || '',
+                  department: formData.get('department') || '',
+                  job_title: formData.get('job_title') || '',
+                  location: formData.get('location') || '',
+                  country: formData.get('country') || '',
+                  region: formData.get('region') || '',
+                  vacation_days_per_year: formData.get('vacation_days_per_year') || '',
+                  contract_type: formData.get('contract_type') || '',
+                  contract_start_date: formData.get('contract_start_date') || '',
+                  contract_end_date: formData.get('contract_end_date') || '',
+                  contract_document_url: formData.get('contract_document_url') || '',
+                  salary: formData.get('salary') || '',
+                  salary_currency: formData.get('salary_currency') || '',
+                  has_bonus: formData.get('has_bonus') === 'on',
+                  bonus_type: formData.get('bonus_type') || '',
+                  bonus_percentage: formData.get('bonus_percentage') || '',
+                  has_commission: formData.get('has_commission') === 'on',
+                  commission_notes: formData.get('commission_notes') || '',
+                  personal_address: formData.get('personal_address') || '',
+                  working_address: formData.get('working_address') || '',
+                  spouse_partner_name: formData.get('spouse_partner_name') || '',
+                  spouse_partner_phone: formData.get('spouse_partner_phone') || '',
+                  spouse_partner_email: formData.get('spouse_partner_email') || '',
+                };
               };
 
-              const goToNext = () => {
-                if (hasNext) {
+              // Function to check if form has unsaved changes
+              const hasUnsavedChanges = () => {
+                const currentValues = getFormValues();
+                if (!currentValues) return false;
+
+                const original = editingEmployee;
+                return (
+                  (currentValues.manager_email || '') !== (original.manager_email || '') ||
+                  (currentValues.department || '') !== (original.department || '') ||
+                  (currentValues.job_title || '') !== (original.job_title || '') ||
+                  (currentValues.location || '') !== (original.location || '') ||
+                  (currentValues.country || '') !== (original.country || '') ||
+                  (currentValues.region || '') !== (original.region || '') ||
+                  String(currentValues.vacation_days_per_year || '20') !== String(original.vacation_days_per_year || '20') ||
+                  (currentValues.contract_type || '') !== (original.contract_type || '') ||
+                  (currentValues.contract_start_date || '') !== (original.contract_start_date || '') ||
+                  (currentValues.contract_end_date || '') !== (original.contract_end_date || '') ||
+                  (currentValues.contract_document_url || '') !== (original.contract_document_url || '') ||
+                  (currentValues.salary || '') !== String(original.salary || '') ||
+                  (currentValues.salary_currency || 'EUR') !== (original.salary_currency || 'EUR') ||
+                  currentValues.has_bonus !== (original.has_bonus || false) ||
+                  (currentValues.bonus_type || '') !== (original.bonus_type || '') ||
+                  (currentValues.bonus_percentage || '') !== String(original.bonus_percentage || '') ||
+                  currentValues.has_commission !== (original.has_commission || false) ||
+                  (currentValues.commission_notes || '') !== (original.commission_notes || '') ||
+                  (currentValues.personal_address || '') !== (original.personal_address || '') ||
+                  (currentValues.working_address || '') !== (original.working_address || '') ||
+                  (currentValues.spouse_partner_name || '') !== (original.spouse_partner_name || '') ||
+                  (currentValues.spouse_partner_phone || '') !== (original.spouse_partner_phone || '') ||
+                  (currentValues.spouse_partner_email || '') !== (original.spouse_partner_email || '')
+                );
+              };
+
+              // Navigate with unsaved changes check
+              const navigateWithCheck = async (direction) => {
+                if (hasUnsavedChanges()) {
+                  const userChoice = window.confirm(
+                    "You have unsaved changes. Click OK to SAVE and continue, or Cancel to continue WITHOUT saving."
+                  );
+                  if (userChoice) {
+                    // User chose to save - use saveAndNavigate
+                    await saveAndNavigate(direction);
+                    return;
+                  }
+                  // User chose to continue without saving - fall through to navigate
+                }
+                // Navigate without saving
+                if (direction === 'previous' && hasPrevious) {
+                  setEditingEmployee(filteredEmployees[currentIndex - 1]);
+                } else if (direction === 'next' && hasNext) {
                   setEditingEmployee(filteredEmployees[currentIndex + 1]);
                 }
               };
+
+              const goToPrevious = () => navigateWithCheck('previous');
+              const goToNext = () => navigateWithCheck('next');
 
               const saveAndNavigate = async (direction) => {
                 const form = document.getElementById('employee-edit-form');

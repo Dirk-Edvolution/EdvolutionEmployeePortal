@@ -49,12 +49,37 @@ def callback():
     session['user_name'] = user_info.get('name', '')
     session['user_picture'] = user_info.get('picture', '')
 
-    # Ensure user exists in database
+    # Ensure user exists in database and sync their data
     db = FirestoreService()
     employee = db.get_employee(user_info['email'])
 
-    if not employee:
-        # If user doesn't exist, trigger a sync (admin should have synced, but just in case)
+    if employee:
+        # Auto-sync: Update employee data from the OAuth user info on every login
+        # This keeps names, photos, etc. in sync with Google Workspace
+        needs_update = False
+        
+        if user_info.get('name') and employee.full_name != user_info.get('name'):
+            employee.full_name = user_info.get('name', employee.full_name)
+            needs_update = True
+        
+        if user_info.get('given_name') and employee.given_name != user_info.get('given_name'):
+            employee.given_name = user_info.get('given_name', employee.given_name)
+            needs_update = True
+            
+        if user_info.get('family_name') and employee.family_name != user_info.get('family_name'):
+            employee.family_name = user_info.get('family_name', employee.family_name)
+            needs_update = True
+            
+        if user_info.get('picture') and employee.photo_url != user_info.get('picture'):
+            employee.photo_url = user_info.get('picture', employee.photo_url)
+            needs_update = True
+        
+        if needs_update:
+            from datetime import datetime
+            employee.last_workspace_sync = datetime.utcnow()
+            db.update_employee(employee)
+    else:
+        # If user doesn't exist, redirect to setup (admin should have synced)
         return redirect(url_for('auth.profile_setup'))
 
     return redirect('/dashboard')  # Frontend route

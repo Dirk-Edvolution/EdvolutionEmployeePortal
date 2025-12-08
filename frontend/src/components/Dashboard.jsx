@@ -703,6 +703,15 @@ export default function Dashboard({ user, onLogout }) {
               const hasPrevious = currentIndex > 0;
               const hasNext = currentIndex < filteredEmployees.length - 1;
 
+              // Get target employee for navigation
+              const getTargetEmployee = (direction) => {
+                const targetIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1;
+                if (targetIndex >= 0 && targetIndex < filteredEmployees.length) {
+                  return filteredEmployees[targetIndex];
+                }
+                return null;
+              };
+
               // Check if form has unsaved changes
               const checkDirty = () => {
                 const form = document.getElementById('employee-edit-form');
@@ -720,39 +729,38 @@ export default function Dashboard({ user, onLogout }) {
                 if (String(formData.get('vacation_days_per_year') || '20') !== String(orig.vacation_days_per_year || 20)) return true;
                 if ((formData.get('contract_type') || '') !== (orig.contract_type || '')) return true;
                 if ((formData.get('salary') || '') !== String(orig.salary || '')) return true;
-                if (formData.get('has_bonus') === 'on' !== (orig.has_bonus || false)) return true;
-                if (formData.get('has_commission') === 'on' !== (orig.has_commission || false)) return true;
+                if ((formData.get('has_bonus') === 'on') !== (orig.has_bonus || false)) return true;
+                if ((formData.get('has_commission') === 'on') !== (orig.has_commission || false)) return true;
 
                 return false;
               };
 
-              // Navigate to another employee
-              const navigateTo = (direction) => {
-                const targetIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1;
-                if (targetIndex >= 0 && targetIndex < filteredEmployees.length) {
-                  setEditingEmployee(filteredEmployees[targetIndex]);
-                }
-              };
-
               // Handle navigation with dirty check
-              const handleNavigate = (direction) => {
+              const handleNavigate = async (direction) => {
+                const targetEmployee = getTargetEmployee(direction);
+                if (!targetEmployee) return;
+
                 if (checkDirty()) {
-                  const save = window.confirm(
+                  const wantToSave = window.confirm(
                     'You have unsaved changes!\n\nClick OK to SAVE changes first.\nClick Cancel to DISCARD changes and continue.'
                   );
-                  if (save) {
+
+                  if (wantToSave) {
                     // Save first, then navigate
-                    handleSave(() => navigateTo(direction));
-                    return;
+                    const saved = await doSave();
+                    if (!saved) return; // Save failed, don't navigate
                   }
+                  // If user clicked Cancel or save succeeded, navigate to target
                 }
-                navigateTo(direction);
+
+                // Navigate to target employee
+                setEditingEmployee(targetEmployee);
               };
 
-              // Save employee data
-              const handleSave = async (onSuccess) => {
+              // Save employee data - returns true on success, false on failure
+              const doSave = async () => {
                 const form = document.getElementById('employee-edit-form');
-                if (!form) return;
+                if (!form) return false;
 
                 const formData = new FormData(form);
                 const updates = {
@@ -786,24 +794,29 @@ export default function Dashboard({ user, onLogout }) {
                   await employeeAPI.update(editingEmployee.email, updates);
                   showMessage('Employee saved successfully!');
 
-                  // Refresh the employee list to get updated data
+                  // Refresh the employee list
                   const updatedEmployees = await employeeAPI.list();
                   setEmployees(updatedEmployees);
 
-                  // Update the current editing employee with new data
+                  return true;
+                } catch (error) {
+                  showMessage('Failed to save: ' + error.message, 'error');
+                  return false;
+                } finally {
+                  setLoading(false);
+                }
+              };
+
+              // Handle save button click (just save, no navigation)
+              const handleSaveClick = async () => {
+                const saved = await doSave();
+                if (saved) {
+                  // Update the editing employee with fresh data
+                  const updatedEmployees = await employeeAPI.list();
                   const updatedEmployee = updatedEmployees.find(e => e.email === editingEmployee.email);
                   if (updatedEmployee) {
                     setEditingEmployee(updatedEmployee);
                   }
-
-                  // Call success callback if provided (for navigation after save)
-                  if (onSuccess) {
-                    onSuccess();
-                  }
-                } catch (error) {
-                  showMessage('Failed to save: ' + error.message, 'error');
-                } finally {
-                  setLoading(false);
                 }
               };
 
@@ -876,7 +889,7 @@ export default function Dashboard({ user, onLogout }) {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleSave()}
+                          onClick={() => handleSaveClick()}
                           disabled={loading}
                           style={{
                             padding: '10px 20px',

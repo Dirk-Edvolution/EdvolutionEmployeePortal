@@ -74,6 +74,17 @@ class TimeOffRequest:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for Firestore"""
+        def safe_isoformat(dt):
+            """Safely convert datetime to ISO format, handling both datetime objects and strings"""
+            if dt is None:
+                return None
+            if isinstance(dt, str):
+                return dt  # Already a string
+            if isinstance(dt, datetime):
+                return dt.isoformat()
+            # Firestore DatetimeWithNanoseconds
+            return dt.isoformat()
+
         return {
             'employee_email': self.employee_email,
             'start_date': self.start_date.isoformat(),
@@ -82,17 +93,17 @@ class TimeOffRequest:
             'notes': self.notes,
             'status': self.status.value,
             'manager_email': self.manager_email,
-            'manager_approved_at': self.manager_approved_at.isoformat() if self.manager_approved_at else None,
+            'manager_approved_at': safe_isoformat(self.manager_approved_at),
             'manager_approved_by': self.manager_approved_by,
-            'admin_approved_at': self.admin_approved_at.isoformat() if self.admin_approved_at else None,
+            'admin_approved_at': safe_isoformat(self.admin_approved_at),
             'admin_approved_by': self.admin_approved_by,
-            'rejected_at': self.rejected_at.isoformat() if self.rejected_at else None,
+            'rejected_at': safe_isoformat(self.rejected_at),
             'rejected_by': self.rejected_by,
             'rejection_reason': self.rejection_reason,
             'calendar_event_id': self.calendar_event_id,
             'autoresponder_enabled': self.autoresponder_enabled,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_at': safe_isoformat(self.created_at),
+            'updated_at': safe_isoformat(self.updated_at),
             'days_count': self.days_count,
         }
 

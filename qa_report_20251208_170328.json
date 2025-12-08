@@ -1,0 +1,69 @@
+{
+  "test_suite": "Employee Portal Production QA",
+  "base_url": "https://rrhh.edvolution.io",
+  "timestamp": "2025-12-08T17:03:28.928014",
+  "summary": {
+    "total": 8,
+    "passed": 6,
+    "failed": 2,
+    "pass_rate": 75.0
+  },
+  "results": [
+    {
+      "test": "Site Accessibility",
+      "passed": true,
+      "timestamp": "2025-12-08T17:03:26.659718",
+      "details": "Status: 200, Load time: 0.25s",
+      "error": ""
+    },
+    {
+      "test": "OAuth Login Redirect",
+      "passed": true,
+      "timestamp": "2025-12-08T17:03:26.810375",
+      "details": "Status: 302, Client ID: 844588465159-6u1fddc...",
+      "error": ""
+    },
+    {
+      "test": "OAuth Scopes",
+      "passed": true,
+      "timestamp": "2025-12-08T17:03:26.960550",
+      "details": "All 6 required scopes present",
+      "error": ""
+    },
+    {
+      "test": "API Protection - /api/timeoff",
+      "passed": false,
+      "timestamp": "2025-12-08T17:03:27.591049",
+      "details": "Status: 404 (expected 401 or 302)",
+      "error": ""
+    },
+    {
+      "test": "Static Assets",
+      "passed": true,
+      "timestamp": "2025-12-08T17:03:28.335399",
+      "details": "All 2 tested assets loaded successfully",
+      "error": ""
+    },
+    {
+      "test": "SPA Routing Fallback",
+      "passed": true,
+      "timestamp": "2025-12-08T17:03:28.485808",
+      "details": "Status: 200, Returns index.html: True",
+      "error": ""
+    },
+    {
+      "test": "Security Headers",
+      "passed": false,
+      "timestamp": "2025-12-08T17:03:28.630036",
+      "details": "0/3 security headers present\n  Missing: X-Content-Type-Options\n  Missing: X-Frame-Options\n  Missing: Strict-Transport-Security",
+      "error": ""
+    },
+    {
+      "test": "Response Times",
+      "passed": true,
+      "timestamp": "2025-12-08T17:03:28.927542",
+      "details": "Average: 0.15s, Max: 0.15s",
+      "error": ""
+    }
+  ]
+}

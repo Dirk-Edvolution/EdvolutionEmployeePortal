@@ -100,7 +100,17 @@ class FirestoreService:
                 if req.start_date.year == year or req.end_date.year == year
             ]
 
-        return sorted(requests, key=lambda x: x[1].created_at, reverse=True)
+        # Sort by created_at, handling both datetime and string formats
+        def get_sort_key(item):
+            created_at = item[1].created_at
+            if isinstance(created_at, str):
+                try:
+                    return datetime.fromisoformat(created_at)
+                except:
+                    return datetime.min
+            return created_at if created_at else datetime.min
+
+        return sorted(requests, key=get_sort_key, reverse=True)
 
     def get_pending_requests_for_manager(self, manager_email: str) -> List[tuple[str, TimeOffRequest]]:
         """Get pending requests for employees managed by this manager"""

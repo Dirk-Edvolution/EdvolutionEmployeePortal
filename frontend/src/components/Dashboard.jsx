@@ -854,7 +854,7 @@ export default function Dashboard({ user, onLogout }) {
                         </button>
                       </div>
                     </div>
-                    <form id="employee-edit-form" onSubmit={(e) => {
+                    <form key={editingEmployee.email} id="employee-edit-form" onSubmit={(e) => {
                       e.preventDefault()
                       const formData = new FormData(e.target)
                       const updates = {

@@ -773,66 +773,86 @@ export default function Dashboard({ user, onLogout }) {
                       paddingBottom: '1rem',
                       borderBottom: '1px solid #e0e0e0'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '0 0 auto' }}>
                         <button
                           type="button"
                           onClick={goToPrevious}
                           disabled={!hasPrevious || loading}
                           className="nav-btn"
                           style={{
+                            width: '70px',
                             padding: '8px 12px',
                             background: hasPrevious ? '#667eea' : '#ccc',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: hasPrevious ? 'pointer' : 'not-allowed',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            flexShrink: 0
                           }}
                           title="Previous Employee"
                         >
                           ← Prev
                         </button>
-                        <h2 style={{ margin: 0 }}>{editingEmployee.full_name || editingEmployee.email}</h2>
+                      </div>
+                      <div style={{
+                        flex: '1 1 auto',
+                        textAlign: 'center',
+                        overflow: 'hidden',
+                        padding: '0 1rem'
+                      }}>
+                        <h2 style={{
+                          margin: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {editingEmployee.full_name || editingEmployee.email}
+                        </h2>
+                        <span style={{ fontSize: '12px', color: '#666' }}>
+                          {currentIndex + 1} of {filteredEmployees.length}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '0 0 auto' }}>
                         <button
                           type="button"
                           onClick={goToNext}
                           disabled={!hasNext || loading}
                           className="nav-btn"
                           style={{
+                            width: '70px',
                             padding: '8px 12px',
                             background: hasNext ? '#667eea' : '#ccc',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: hasNext ? 'pointer' : 'not-allowed',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            flexShrink: 0
                           }}
                           title="Next Employee"
                         >
                           Next →
                         </button>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '12px', color: '#666' }}>
-                          {currentIndex + 1} of {filteredEmployees.length}
-                        </span>
                         <button
                           type="button"
                           onClick={() => saveAndNavigate('previous')}
                           disabled={!hasPrevious || loading}
                           className="save-nav-btn"
                           style={{
+                            width: '120px',
                             padding: '8px 12px',
                             background: hasPrevious ? '#28a745' : '#ccc',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: hasPrevious ? 'pointer' : 'not-allowed',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            flexShrink: 0
                           }}
                           title="Save and go to Previous"
                         >
-                          💾 ← Save & Prev
+                          💾 Save & Prev
                         </button>
                         <button
                           type="button"
@@ -840,17 +860,19 @@ export default function Dashboard({ user, onLogout }) {
                           disabled={!hasNext || loading}
                           className="save-nav-btn"
                           style={{
+                            width: '120px',
                             padding: '8px 12px',
                             background: hasNext ? '#28a745' : '#ccc',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: hasNext ? 'pointer' : 'not-allowed',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            flexShrink: 0
                           }}
                           title="Save and go to Next"
                         >
-                          Save & Next → 💾
+                          Save & Next 💾
                         </button>
                       </div>
                     </div>

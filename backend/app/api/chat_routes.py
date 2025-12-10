@@ -188,9 +188,11 @@ def chat_webhook():
     """
     try:
         event = request.get_json()
-        logger.info(f"Received Chat event: {event.get('type')}")
+        # Log the full event for debugging
+        logger.info(f"Received Chat event - Full payload: {event}")
 
         event_type = event.get('type')
+        logger.info(f"Event type: {event_type}")
 
         # Handle bot added to space
         if event_type == 'ADDED_TO_SPACE':

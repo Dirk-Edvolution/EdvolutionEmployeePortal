@@ -2,7 +2,7 @@
 Google Chat webhook API routes for time-off approval via Chat
 """
 from flask import Blueprint, jsonify, request
-from backend.app.services import FirestoreService
+from backend.app.services import FirestoreService, ChatAIService
 from backend.app.models import ApprovalStatus
 from backend.config.settings import ADMIN_USERS
 import logging
@@ -265,10 +265,34 @@ def chat_webhook():
                     return jsonify({"text": response_text})
 
             else:
-                return jsonify({
-                    "text": f"Hello {user_name}! I received your message: \"{message_text}\"\n\n"
-                            f"Type `help` to see what I can do!"
-                })
+                # Use Gemini AI for all other queries
+                user_email = event.get('user', {}).get('email')
+                if not user_email:
+                    return jsonify({
+                        "text": "❌ Could not identify your email address."
+                    })
+
+                try:
+                    # Create AI service instance
+                    ai_service = ChatAIService(user_email)
+
+                    # Try quick response first (faster for common queries)
+                    intent = ai_service.extract_intent(message_text)
+                    quick_response = ai_service.quick_response(intent['intent'])
+
+                    if quick_response:
+                        return jsonify({"text": quick_response})
+
+                    # Use AI for complex queries
+                    ai_response = ai_service.process_query(message_text)
+                    return jsonify({"text": ai_response})
+
+                except Exception as e:
+                    logger.error(f"Error processing AI query: {e}", exc_info=True)
+                    return jsonify({
+                        "text": f"❌ Sorry, I encountered an error: {str(e)}\n\n"
+                                f"Try asking: 'How many vacation days do I have left?'"
+                    })
 
         # Handle card button clicks (interactive actions)
         elif event_type == 'CARD_CLICKED':

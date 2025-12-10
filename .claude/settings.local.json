@@ -26,7 +26,16 @@
       "Bash(python debug_approval.py:*)",
       "Bash(python:*)",
       "Bash(ls:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(xargs:*)",
+      "Bash(venv/bin/pip list:*)",
+      "Bash(venv/bin/python3:*)",
+      "Bash(venv/bin/pip install:*)",
+      "Bash(gh run list:*)",
+      "Bash(gcloud run services describe:*)",
+      "Bash(gcloud builds list:*)",
+      "Bash(chmod:*)",
+      "Bash(gcloud logging read:*)"
     ],
     "deny": [],
     "ask": []

@@ -272,7 +272,7 @@ def chat_webhook():
                     return jsonify({"text": response_text})
 
             else:
-                # Use Gemini AI for all other queries
+                # Use quick responses for queries
                 user_email = event.get('user', {}).get('email')
                 if not user_email:
                     return jsonify({
@@ -283,22 +283,27 @@ def chat_webhook():
                     # Create AI service instance
                     ai_service = ChatAIService(user_email)
 
-                    # Try quick response first (faster for common queries)
+                    # Use quick responses (no Gemini AI for now)
                     intent = ai_service.extract_intent(message_text)
                     quick_response = ai_service.quick_response(intent['intent'])
 
                     if quick_response:
                         return jsonify({"text": quick_response})
 
-                    # Use AI for complex queries
-                    ai_response = ai_service.process_query(message_text)
-                    return jsonify({"text": ai_response})
+                    # For other queries, provide helpful message
+                    return jsonify({
+                        "text": f"Hello {user_name}! 👋\n\n"
+                                f"I can help you with:\n"
+                                f"• `vacation days` - Check your remaining days\n"
+                                f"• `my requests` - View your time-off requests\n"
+                                f"• `pending` - See pending approvals\n\n"
+                                f"Or visit: https://rrhh.edvolution.io"
+                    })
 
                 except Exception as e:
-                    logger.error(f"Error processing AI query: {e}", exc_info=True)
+                    logger.error(f"Error processing query: {e}", exc_info=True)
                     return jsonify({
-                        "text": f"❌ Sorry, I encountered an error: {str(e)}\n\n"
-                                f"Try asking: 'How many vacation days do I have left?'"
+                        "text": f"Hello {user_name}! Type `help` to see what I can do."
                     })
 
         # Handle card button clicks (interactive actions)

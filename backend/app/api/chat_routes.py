@@ -191,7 +191,14 @@ def chat_webhook():
         # Log the full event for debugging
         logger.info(f"Received Chat event - Full payload: {event}")
 
-        event_type = event.get('type')
+        # Google Chat uses different event structures
+        # Check for both 'type' and 'eventType' fields
+        event_type = event.get('type') or event.get('eventType')
+
+        # Also check for message directly without type
+        if not event_type and event.get('message'):
+            event_type = 'MESSAGE'
+
         logger.info(f"Event type: {event_type}")
 
         # Handle bot added to space

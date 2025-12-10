@@ -21,7 +21,8 @@ class AuditQueryService:
             self.model = None
         else:
             genai.configure(api_key=GOOGLE_API_KEY)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')  # Cheapest model
+            # Use gemini-flash-lite-latest (cheapest model for simple queries)
+            self.model = genai.GenerativeModel('gemini-flash-lite-latest')
 
     def parse_natural_query(self, question: str) -> Dict[str, Any]:
         """

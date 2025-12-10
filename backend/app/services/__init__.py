@@ -3,5 +3,6 @@ from .workspace_service import WorkspaceService
 from .calendar_service import CalendarService
 from .gmail_service import GmailService
 from .notification_service import NotificationService
+from .tasks_service import TasksService
 
-__all__ = ['FirestoreService', 'WorkspaceService', 'CalendarService', 'GmailService', 'NotificationService']
+__all__ = ['FirestoreService', 'WorkspaceService', 'CalendarService', 'GmailService', 'NotificationService', 'TasksService']

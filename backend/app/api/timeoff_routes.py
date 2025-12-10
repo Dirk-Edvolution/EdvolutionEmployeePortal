@@ -62,7 +62,7 @@ def create_timeoff_request():
             credentials = get_credentials_from_session()
             notification_service = NotificationService(credentials)
 
-            notification_service.send_timeoff_approval_notification(
+            notification_result = notification_service.send_timeoff_approval_notification(
                 approver_email=employee.manager_email,
                 employee_name=employee.full_name or employee.email,
                 employee_email=current_email,
@@ -74,6 +74,15 @@ def create_timeoff_request():
                 request_id=request_id,
                 approval_level="manager"
             )
+
+            # Store task ID if task was created
+            if isinstance(notification_result, tuple):
+                success, task_id = notification_result
+                if task_id:
+                    timeoff_request.manager_task_id = task_id
+                    db.update_timeoff_request(request_id, timeoff_request)
+                    logger.info(f"Manager task {task_id} created for request {request_id}")
+
             logger.info(f"Notification sent to manager {employee.manager_email} for request {request_id}")
         except Exception as e:
             logger.error(f"Failed to send notification to manager: {str(e)}")
@@ -165,15 +174,27 @@ def approve_as_manager(request_id):
     timeoff_request.approve_by_manager(current_email)
     db.update_timeoff_request(request_id, timeoff_request)
 
-    # Send notification to admins
+    # Complete manager's task
+    if timeoff_request.manager_task_id:
+        try:
+            credentials = get_credentials_from_session()
+            from backend.app.services import TasksService
+            tasks_service = TasksService(credentials)
+            tasks_service.complete_task(timeoff_request.manager_task_id)
+            logger.info(f"Completed manager task {timeoff_request.manager_task_id}")
+        except Exception as e:
+            logger.error(f"Failed to complete manager task: {str(e)}")
+
+    # Send notification to admins and create tasks
     try:
         credentials = get_credentials_from_session()
         notification_service = NotificationService(credentials)
         employee = db.get_employee(timeoff_request.employee_email)
 
+        admin_task_ids = []
         for admin_email in ADMIN_USERS:
             if admin_email:  # Skip empty strings
-                notification_service.send_timeoff_approval_notification(
+                notification_result = notification_service.send_timeoff_approval_notification(
                     approver_email=admin_email,
                     employee_name=employee.full_name if employee else timeoff_request.employee_email,
                     employee_email=timeoff_request.employee_email,
@@ -185,6 +206,19 @@ def approve_as_manager(request_id):
                     request_id=request_id,
                     approval_level="admin"
                 )
+
+                # Store task IDs if tasks were created
+                if isinstance(notification_result, tuple):
+                    success, task_id = notification_result
+                    if task_id:
+                        admin_task_ids.append(task_id)
+
+        # Update request with admin task IDs
+        if admin_task_ids:
+            timeoff_request.admin_task_ids = admin_task_ids
+            db.update_timeoff_request(request_id, timeoff_request)
+            logger.info(f"Admin tasks created for request {request_id}: {admin_task_ids}")
+
         logger.info(f"Notifications sent to admins for request {request_id}")
 
         # Notify employee about manager approval
@@ -225,6 +259,21 @@ def approve_as_admin(request_id):
 
     timeoff_request.approve_by_admin(current_email)
     db.update_timeoff_request(request_id, timeoff_request)
+
+    # Complete all admin tasks
+    if timeoff_request.admin_task_ids:
+        try:
+            credentials = get_credentials_from_session()
+            from backend.app.services import TasksService
+            tasks_service = TasksService(credentials)
+            for task_id in timeoff_request.admin_task_ids:
+                try:
+                    tasks_service.complete_task(task_id)
+                    logger.info(f"Completed admin task {task_id}")
+                except Exception as task_error:
+                    logger.error(f"Failed to complete task {task_id}: {task_error}")
+        except Exception as e:
+            logger.error(f"Failed to complete admin tasks: {str(e)}")
 
     # Add to calendar and enable autoresponder if requested
     data = request.json or {}
@@ -287,6 +336,31 @@ def reject_request(request_id):
 
     timeoff_request.reject(current_email, reason)
     db.update_timeoff_request(request_id, timeoff_request)
+
+    # Clean up pending tasks
+    try:
+        credentials = get_credentials_from_session()
+        from backend.app.services import TasksService
+        tasks_service = TasksService(credentials)
+
+        # Delete or complete manager task if exists
+        if timeoff_request.manager_task_id:
+            try:
+                tasks_service.delete_task(timeoff_request.manager_task_id)
+                logger.info(f"Deleted manager task {timeoff_request.manager_task_id} after rejection")
+            except Exception as task_error:
+                logger.warning(f"Could not delete manager task: {task_error}")
+
+        # Delete or complete admin tasks if exist
+        if timeoff_request.admin_task_ids:
+            for task_id in timeoff_request.admin_task_ids:
+                try:
+                    tasks_service.delete_task(task_id)
+                    logger.info(f"Deleted admin task {task_id} after rejection")
+                except Exception as task_error:
+                    logger.warning(f"Could not delete admin task {task_id}: {task_error}")
+    except Exception as e:
+        logger.error(f"Failed to clean up tasks after rejection: {str(e)}")
 
     # Send notification to employee
     try:

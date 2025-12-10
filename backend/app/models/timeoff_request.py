@@ -42,6 +42,8 @@ class TimeOffRequest:
         rejection_reason: Optional[str] = None,
         calendar_event_id: Optional[str] = None,
         autoresponder_enabled: bool = False,
+        manager_task_id: Optional[str] = None,
+        admin_task_ids: Optional[List[str]] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
         request_id: Optional[str] = None,
@@ -64,6 +66,8 @@ class TimeOffRequest:
         self.rejection_reason = rejection_reason
         self.calendar_event_id = calendar_event_id
         self.autoresponder_enabled = autoresponder_enabled
+        self.manager_task_id = manager_task_id
+        self.admin_task_ids = admin_task_ids or []
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
 
@@ -102,6 +106,8 @@ class TimeOffRequest:
             'rejection_reason': self.rejection_reason,
             'calendar_event_id': self.calendar_event_id,
             'autoresponder_enabled': self.autoresponder_enabled,
+            'manager_task_id': self.manager_task_id,
+            'admin_task_ids': self.admin_task_ids,
             'created_at': safe_isoformat(self.created_at),
             'updated_at': safe_isoformat(self.updated_at),
             'days_count': self.days_count,

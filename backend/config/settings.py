@@ -31,6 +31,7 @@ OAUTH_SCOPES = [
     'https://www.googleapis.com/auth/gmail.settings.sharing',
     'https://www.googleapis.com/auth/gmail.send',  # For sending notification emails
     'https://www.googleapis.com/auth/chat.messages',  # For Google Chat notifications
+    'https://www.googleapis.com/auth/tasks',  # For Google Tasks integration
 ]
 
 # Google Workspace Configuration
@@ -67,3 +68,9 @@ TIMEOFF_TYPES = ['vacation', 'sick_leave', 'day_off']
 
 # Approval status
 APPROVAL_STATUS = ['pending', 'manager_approved', 'approved', 'rejected']
+
+# Notification Configuration
+ENABLE_CHAT_NOTIFICATIONS = os.getenv('ENABLE_CHAT_NOTIFICATIONS', 'true').lower() == 'true'
+ENABLE_TASK_NOTIFICATIONS = os.getenv('ENABLE_TASK_NOTIFICATIONS', 'true').lower() == 'true'
+NOTIFICATION_RETRY_ATTEMPTS = int(os.getenv('NOTIFICATION_RETRY_ATTEMPTS', '3'))
+TASK_DUE_DAYS = int(os.getenv('TASK_DUE_DAYS', '2'))

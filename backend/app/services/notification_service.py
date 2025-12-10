@@ -3,11 +3,15 @@ Notification service for Google Chat and Email
 """
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from backend.app.services.tasks_service import TasksService
+from backend.config.settings import ENABLE_CHAT_NOTIFICATIONS, ENABLE_TASK_NOTIFICATIONS, TASK_DUE_DAYS, NOTIFICATION_RETRY_ATTEMPTS
 import logging
+import time
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +23,40 @@ class NotificationService:
         self.credentials = credentials
         self.chat_service = None
         self.gmail_service = None
+        self.tasks_service = None
+
+    def _retry_with_backoff(self, func: Callable, *args, **kwargs) -> Any:
+        """
+        Retry a function with exponential backoff
+
+        Args:
+            func: Function to retry
+            *args: Positional arguments to pass to function
+            **kwargs: Keyword arguments to pass to function
+
+        Returns:
+            Result from function call
+
+        Raises:
+            Last exception if all retries fail
+        """
+        max_attempts = NOTIFICATION_RETRY_ATTEMPTS
+        backoff_delays = [60, 300, 900]  # 1 min, 5 min, 15 min
+
+        last_error = None
+        for attempt in range(max_attempts):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                last_error = e
+                if attempt < max_attempts - 1:
+                    delay = backoff_delays[min(attempt, len(backoff_delays) - 1)]
+                    logger.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {delay}s...")
+                    time.sleep(delay)
+                else:
+                    logger.error(f"All {max_attempts} attempts failed for {func.__name__}: {e}")
+
+        raise last_error
 
     def _get_chat_service(self):
         """Lazy load Google Chat service"""
@@ -31,6 +69,12 @@ class NotificationService:
         if not self.gmail_service:
             self.gmail_service = build('gmail', 'v1', credentials=self.credentials)
         return self.gmail_service
+
+    def _get_tasks_service(self):
+        """Lazy load Tasks service"""
+        if not self.tasks_service:
+            self.tasks_service = TasksService(self.credentials)
+        return self.tasks_service
 
     def send_chat_message(self, space_name: str, message_text: str) -> bool:
         """
@@ -97,6 +141,156 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Failed to send direct message to {user_email}: {str(e)}")
             return False
+
+    def send_approval_chat_card(
+        self,
+        user_email: str,
+        employee_name: str,
+        employee_email: str,
+        start_date: str,
+        end_date: str,
+        days_count: int,
+        timeoff_type: str,
+        notes: Optional[str] = None,
+        request_id: Optional[str] = None,
+        approval_level: str = "manager",
+        portal_url: str = "http://localhost:8080"
+    ) -> bool:
+        """
+        Send an approval notification via Google Chat with interactive card
+
+        Args:
+            user_email: Email of the approver
+            employee_name: Name of employee requesting time off
+            employee_email: Email of employee
+            start_date: Start date
+            end_date: End date
+            days_count: Number of days
+            timeoff_type: Type of time off
+            notes: Optional notes
+            request_id: Request ID
+            approval_level: "manager" or "admin"
+            portal_url: Base URL of the portal
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not ENABLE_CHAT_NOTIFICATIONS:
+            logger.info("Chat notifications disabled, skipping")
+            return True
+
+        try:
+            chat = self._get_chat_service()
+
+            timeoff_label = timeoff_type.replace('_', ' ').title()
+
+            # Create card message with interactive buttons
+            card_message = {
+                "text": f"🔔 New {approval_level.title()} Approval Required",
+                "cardsV2": [{
+                    "cardId": f"approval-{request_id}",
+                    "card": {
+                        "header": {
+                            "title": f"Time-Off Approval Required",
+                            "subtitle": f"{employee_name}'s {timeoff_label} Request",
+                            "imageUrl": "https://fonts.gstatic.com/s/i/productlogos/calendar_2020q4/v13/web-24dp/logo_calendar_2020q4_color_1x_web_24dp.png"
+                        },
+                        "sections": [{
+                            "widgets": [
+                                {
+                                    "decoratedText": {
+                                        "topLabel": "Employee",
+                                        "text": f"{employee_name}",
+                                        "bottomLabel": employee_email
+                                    }
+                                },
+                                {
+                                    "decoratedText": {
+                                        "topLabel": "Type",
+                                        "text": timeoff_label
+                                    }
+                                },
+                                {
+                                    "decoratedText": {
+                                        "topLabel": "Dates",
+                                        "text": f"{start_date} to {end_date}"
+                                    }
+                                },
+                                {
+                                    "decoratedText": {
+                                        "topLabel": "Duration",
+                                        "text": f"{days_count} days"
+                                    }
+                                }
+                            ]
+                        }]
+                    }
+                }]
+            }
+
+            # Add notes if provided
+            if notes:
+                card_message["cardsV2"][0]["card"]["sections"][0]["widgets"].append({
+                    "decoratedText": {
+                        "topLabel": "Notes",
+                        "text": notes,
+                        "wrapText": True
+                    }
+                })
+
+            # Add action buttons
+            card_message["cardsV2"][0]["card"]["sections"].append({
+                "widgets": [{
+                    "buttonList": {
+                        "buttons": [
+                            {
+                                "text": "View Request",
+                                "onClick": {
+                                    "openLink": {
+                                        "url": f"{portal_url}/requests/{request_id}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }]
+            })
+
+            # Create a DM space with the user
+            space = chat.spaces().create(body={
+                'type': 'DIRECT_MESSAGE',
+                'singleUserBotDm': False,
+                'displayName': f'DM with {user_email}'
+            }).execute()
+
+            # Send the card message
+            response = chat.spaces().messages().create(
+                parent=space['name'],
+                body=card_message
+            ).execute()
+
+            logger.info(f"Approval card sent to {user_email}: {response.get('name')}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to send approval card to {user_email}: {str(e)}")
+            # Fall back to simple text message
+            try:
+                simple_message = f"""🔔 **Time-Off Approval Required**
+
+**Employee:** {employee_name} ({employee_email})
+**Type:** {timeoff_label}
+**Dates:** {start_date} to {end_date} ({days_count} days)"""
+
+                if notes:
+                    simple_message += f"\n**Notes:** {notes}"
+
+                simple_message += f"\n\nPlease log in to the Employee Portal to review this {approval_level} approval request."
+
+                return self.send_direct_message(user_email, simple_message)
+            except Exception as fallback_error:
+                logger.error(f"Fallback message also failed: {fallback_error}")
+                return False
 
     def send_email(
         self,
@@ -265,7 +459,7 @@ Employee Portal System
 
         chat_message += f"\nPlease log in to the Employee Portal to review this {level_label} approval request."
 
-        # Send both notifications
+        # Send email notification
         email_success = self.send_email(
             to_email=approver_email,
             subject=subject,
@@ -273,15 +467,51 @@ Employee Portal System
             body_html=html_body
         )
 
-        # Try to send chat message (this may fail if user doesn't have chat enabled)
+        # Send Google Chat card notification (if enabled)
         chat_success = False
-        try:
-            chat_success = self.send_direct_message(approver_email, chat_message)
-        except Exception as e:
-            logger.warning(f"Could not send chat message to {approver_email}: {str(e)}")
+        if ENABLE_CHAT_NOTIFICATIONS:
+            try:
+                chat_success = self.send_approval_chat_card(
+                    user_email=approver_email,
+                    employee_name=employee_name,
+                    employee_email=employee_email,
+                    start_date=start_date,
+                    end_date=end_date,
+                    days_count=days_count,
+                    timeoff_type=timeoff_type,
+                    notes=notes,
+                    request_id=request_id,
+                    approval_level=approval_level
+                )
+            except Exception as e:
+                logger.warning(f"Could not send chat card to {approver_email}: {str(e)}")
 
-        # Return True if at least one method succeeded
-        return email_success or chat_success
+        # Create Google Task (if enabled)
+        task_id = None
+        if ENABLE_TASK_NOTIFICATIONS:
+            try:
+                tasks_service = self._get_tasks_service()
+                task_id = tasks_service.create_approval_task(
+                    user_email=approver_email,
+                    employee_name=employee_name,
+                    employee_email=employee_email,
+                    start_date=start_date,
+                    end_date=end_date,
+                    days_count=days_count,
+                    timeoff_type=timeoff_type,
+                    notes=notes,
+                    request_id=request_id,
+                    approval_level=approval_level,
+                    due_days=TASK_DUE_DAYS
+                )
+                if task_id:
+                    logger.info(f"Created task {task_id} for {approver_email}")
+            except Exception as e:
+                logger.warning(f"Could not create task for {approver_email}: {str(e)}")
+
+        # Return True if at least one method succeeded, and return task_id if created
+        success = email_success or chat_success
+        return (success, task_id) if task_id else success
 
     def send_timeoff_status_notification(
         self,

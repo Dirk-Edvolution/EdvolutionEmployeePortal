@@ -25,7 +25,8 @@
       "Bash(python3:*)",
       "Bash(python debug_approval.py:*)",
       "Bash(python:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

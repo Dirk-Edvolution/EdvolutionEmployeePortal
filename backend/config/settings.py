@@ -15,6 +15,9 @@ GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:8080/auth/callback')
 
+# Google Gemini API Configuration (for natural language query processing)
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+
 # OAuth Scopes - Comprehensive list for all features
 OAUTH_SCOPES = [
     'openid',

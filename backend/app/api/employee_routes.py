@@ -77,7 +77,8 @@ def update_current_employee():
 @employee_bp.route('/', methods=['GET'])
 @login_required
 def list_employees():
-    """List all employees (filtered by permissions)"""
+    """List all employees (filtered by permissions) with vacation days info"""
+    from datetime import datetime
     db = FirestoreService()
     current_email = get_current_user_email()
 
@@ -88,7 +89,38 @@ def list_employees():
         # Regular users see their direct reports
         employees = db.get_employees_by_manager(current_email)
 
-    return jsonify([emp.to_dict() for emp in employees]), 200
+    # Enhance each employee with vacation days info
+    current_year = datetime.now().year
+    employees_data = []
+    for emp in employees:
+        emp_dict = emp.to_dict()
+
+        # Calculate vacation days used this year (with error handling)
+        try:
+            used_days = db.calculate_used_vacation_days(emp.email, current_year)
+            total_days = emp.vacation_days_per_year or 20
+            remaining_days = total_days - used_days
+
+            # Add vacation summary
+            emp_dict['vacation_summary'] = {
+                'total_days': total_days,
+                'used_days': used_days,
+                'remaining_days': remaining_days,
+                'year': current_year
+            }
+        except Exception as e:
+            # If calculation fails, provide defaults
+            total_days = emp.vacation_days_per_year or 20
+            emp_dict['vacation_summary'] = {
+                'total_days': total_days,
+                'used_days': 0,
+                'remaining_days': total_days,
+                'year': current_year
+            }
+
+        employees_data.append(emp_dict)
+
+    return jsonify(employees_data), 200
 
 
 @employee_bp.route('/<email>', methods=['GET'])

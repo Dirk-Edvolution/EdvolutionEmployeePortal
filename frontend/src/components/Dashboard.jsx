@@ -476,6 +476,22 @@ export default function Dashboard({ user, onLogout }) {
                           <span className="detail-label">Location:</span>
                           <span>{emp.location || emp.country || 'Not set'}</span>
                         </div>
+                        {emp.vacation_summary && (
+                          <div className="detail-row">
+                            <span className="detail-label">Vacation Days:</span>
+                            <span style={{
+                              fontWeight: 'bold',
+                              color: emp.vacation_summary.remaining_days < (emp.vacation_summary.total_days * 0.25) ? '#dc3545' :
+                                     emp.vacation_summary.remaining_days < (emp.vacation_summary.total_days * 0.5) ? '#ffc107' :
+                                     '#28a745'
+                            }}>
+                              {emp.vacation_summary.remaining_days} / {emp.vacation_summary.total_days} remaining
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                              ({emp.vacation_summary.used_days} used)
+                            </span>
+                          </div>
+                        )}
                         <div className="detail-row">
                           <span className="detail-label">Country:</span>
                           <span>{emp.country || 'Not set'}</span>
@@ -667,10 +683,22 @@ export default function Dashboard({ user, onLogout }) {
                           <span className="detail-label">Location:</span>
                           <span>{emp.location || emp.country || 'Not set'}</span>
                         </div>
-                        <div className="detail-row">
-                          <span className="detail-label">Vacation Days:</span>
-                          <span>{emp.vacation_days_per_year || 20} days/year</span>
-                        </div>
+                        {emp.vacation_summary && (
+                          <div className="detail-row">
+                            <span className="detail-label">Vacation Days:</span>
+                            <span style={{
+                              fontWeight: 'bold',
+                              color: emp.vacation_summary.remaining_days < (emp.vacation_summary.total_days * 0.25) ? '#dc3545' :
+                                     emp.vacation_summary.remaining_days < (emp.vacation_summary.total_days * 0.5) ? '#ffc107' :
+                                     '#28a745'
+                            }}>
+                              {emp.vacation_summary.remaining_days} / {emp.vacation_summary.total_days} remaining
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                              ({emp.vacation_summary.used_days} used in {emp.vacation_summary.year})
+                            </span>
+                          </div>
+                        )}
                         <div className="detail-row">
                           <span className="detail-label">Admin:</span>
                           <span className={emp.is_admin ? 'badge-yes' : 'badge-no'}>

@@ -103,12 +103,26 @@ class FirestoreService:
         # Sort by created_at, handling both datetime and string formats
         def get_sort_key(item):
             created_at = item[1].created_at
+            if created_at is None:
+                return datetime.min.replace(tzinfo=None)
+
             if isinstance(created_at, str):
                 try:
-                    return datetime.fromisoformat(created_at)
+                    dt = datetime.fromisoformat(created_at)
+                    # Remove timezone info to make all datetimes naive for comparison
+                    return dt.replace(tzinfo=None) if dt.tzinfo else dt
                 except:
-                    return datetime.min
-            return created_at if created_at else datetime.min
+                    return datetime.min.replace(tzinfo=None)
+
+            # Handle datetime objects - always remove timezone info
+            try:
+                if hasattr(created_at, 'tzinfo'):
+                    return created_at.replace(tzinfo=None)
+                else:
+                    # Firestore DatetimeWithNanoseconds or other datetime-like objects
+                    return datetime.min.replace(tzinfo=None)
+            except:
+                return datetime.min.replace(tzinfo=None)
 
         return sorted(requests, key=get_sort_key, reverse=True)
 

@@ -23,7 +23,8 @@ class ChatAIService:
     def __init__(self, user_email):
         self.user_email = user_email
         self.db = FirestoreService()
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Use the latest Gemini model
+        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
     def get_user_context(self):
         """Get user's context for AI (vacation days, pending requests, etc.)"""

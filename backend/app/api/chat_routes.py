@@ -385,10 +385,20 @@ def chat_webhook():
                     success=False
                 ))
 
-        # Unknown event type
+        # Unknown event type or no type field - send a default response
         else:
-            logger.warning(f"Unknown Chat event type: {event_type}")
-            return jsonify({"text": "Event received"}), 200
+            if event_type is None:
+                logger.warning(f"Event with no type field - sending default help message")
+                return jsonify({
+                    "text": "👋 Hello! I'm the Edvolution CHRO bot.\n\n"
+                            "*Commands:*\n"
+                            "• Type `help` for available commands\n"
+                            "• Type `status` to check bot status\n"
+                            "• Type `pending` to see your pending approvals"
+                })
+            else:
+                logger.warning(f"Unknown Chat event type: {event_type}")
+                return jsonify({"text": "Event received"}), 200
 
     except Exception as e:
         logger.error(f"Error handling Chat webhook: {str(e)}", exc_info=True)

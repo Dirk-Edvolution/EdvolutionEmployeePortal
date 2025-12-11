@@ -5,11 +5,66 @@ from flask import Blueprint, jsonify, request
 from backend.app.services import FirestoreService, ChatAIService
 from backend.app.models import ApprovalStatus
 from backend.config.settings import ADMIN_USERS
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
+# Initialize Google Chat API client
+def get_chat_service():
+    """Get authenticated Google Chat API service"""
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            os.environ.get('GOOGLE_APPLICATION_CREDENTIALS', '/app/service-account-key.json'),
+            scopes=['https://www.googleapis.com/auth/chat.bot']
+        )
+        return build('chat', 'v1', credentials=credentials)
+    except Exception as e:
+        logger.error(f"Failed to initialize Chat API: {e}")
+        # Fall back to application default credentials
+        from google.auth import default
+        credentials, _ = default(scopes=['https://www.googleapis.com/auth/chat.bot'])
+        return build('chat', 'v1', credentials=credentials)
+
 chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
+
+
+def send_chat_message(space_name, message_text=None, cards=None, thread_name=None):
+    """
+    Send a message to Google Chat space asynchronously
+
+    Args:
+        space_name: The space name (e.g., "spaces/AAAAxxxx")
+        message_text: Plain text message
+        cards: Card message structure
+        thread_name: Optional thread name to reply in thread
+    """
+    try:
+        chat = get_chat_service()
+
+        message_body = {}
+        if message_text:
+            message_body['text'] = message_text
+        if cards:
+            message_body['cardsV2'] = cards if isinstance(cards, list) else [cards]
+
+        # If thread_name provided, reply in thread
+        if thread_name:
+            message_body['thread'] = {'name': thread_name}
+
+        response = chat.spaces().messages().create(
+            parent=space_name,
+            body=message_body
+        ).execute()
+
+        logger.info(f"Message sent successfully to {space_name}")
+        return response
+
+    except Exception as e:
+        logger.error(f"Failed to send Chat message: {e}", exc_info=True)
+        raise
 
 
 def create_approval_card(request_id, employee_name, employee_email, start_date, end_date,
@@ -236,23 +291,43 @@ def chat_webhook():
                 user_name = event['chat']['user'].get('displayName', 'there')
                 user_email = event['chat']['user'].get('email')
 
+            # Extract space and thread information
+            space_name = None
+            thread_name = None
+            if 'space' in event:
+                space_name = event['space'].get('name')
+            elif 'chat' in event and 'messagePayload' in event['chat']:
+                space_name = event['chat']['messagePayload'].get('space', {}).get('name')
+                thread_name = event['chat']['messagePayload'].get('message', {}).get('thread', {}).get('name')
+
+            print(f"[CHAT-DEBUG] Space: {space_name}, Thread: {thread_name}", flush=True)
+
             # Simple command handling
             if 'help' in message_text:
-                return jsonify({
-                    "text": f"Hello {user_name}! 👋\n\n"
-                            f"*Available Commands:*\n"
-                            f"• `help` - Show this help message\n"
-                            f"• `status` - Check bot status\n"
-                            f"• `pending` - Show your pending approvals\n\n"
-                            f"*How it works:*\n"
-                            f"I'll automatically send you time-off approval requests as interactive cards. "
-                            f"Simply click the Approve or Reject buttons to process them instantly!"
-                })
+                response_text = (f"Hello {user_name}! 👋\n\n"
+                                f"*Available Commands:*\n"
+                                f"• `help` - Show this help message\n"
+                                f"• `status` - Check bot status\n"
+                                f"• `pending` - Show your pending approvals\n\n"
+                                f"*How it works:*\n"
+                                f"I'll automatically send you time-off approval requests as interactive cards. "
+                                f"Simply click the Approve or Reject buttons to process them instantly!")
+
+                # Send via Chat API if we have space info
+                if space_name:
+                    send_chat_message(space_name, response_text, thread_name=thread_name)
+                    return jsonify({}), 200
+                else:
+                    # Fallback to sync response
+                    return jsonify({"text": response_text})
 
             elif 'status' in message_text:
-                return jsonify({
-                    "text": "✅ Bot is online and ready to handle time-off approvals!"
-                })
+                response_text = "✅ Bot is online and ready to handle time-off approvals!"
+                if space_name:
+                    send_chat_message(space_name, response_text, thread_name=thread_name)
+                    return jsonify({}), 200
+                else:
+                    return jsonify({"text": response_text})
 
             elif 'pending' in message_text:
                 # user_email already extracted above
@@ -294,37 +369,40 @@ def chat_webhook():
             else:
                 # Use quick responses for queries
                 # user_email already extracted above
+                response_text = None
+
                 if not user_email:
-                    return jsonify({
-                        "text": "❌ Could not identify your email address."
-                    })
+                    response_text = "❌ Could not identify your email address."
+                else:
+                    try:
+                        # Create AI service instance
+                        ai_service = ChatAIService(user_email)
 
-                try:
-                    # Create AI service instance
-                    ai_service = ChatAIService(user_email)
+                        # Use quick responses (no Gemini AI for now)
+                        intent = ai_service.extract_intent(message_text)
+                        quick_response = ai_service.quick_response(intent['intent'])
 
-                    # Use quick responses (no Gemini AI for now)
-                    intent = ai_service.extract_intent(message_text)
-                    quick_response = ai_service.quick_response(intent['intent'])
+                        if quick_response:
+                            response_text = quick_response
+                        else:
+                            # For other queries, provide helpful message
+                            response_text = (f"Hello {user_name}! 👋\n\n"
+                                           f"I can help you with:\n"
+                                           f"• `vacation days` - Check your remaining days\n"
+                                           f"• `my requests` - View your time-off requests\n"
+                                           f"• `pending` - See pending approvals\n\n"
+                                           f"Or visit: https://rrhh.edvolution.io")
 
-                    if quick_response:
-                        return jsonify({"text": quick_response})
+                    except Exception as e:
+                        logger.error(f"Error processing query: {e}", exc_info=True)
+                        response_text = f"Hello {user_name}! Type `help` to see what I can do."
 
-                    # For other queries, provide helpful message
-                    return jsonify({
-                        "text": f"Hello {user_name}! 👋\n\n"
-                                f"I can help you with:\n"
-                                f"• `vacation days` - Check your remaining days\n"
-                                f"• `my requests` - View your time-off requests\n"
-                                f"• `pending` - See pending approvals\n\n"
-                                f"Or visit: https://rrhh.edvolution.io"
-                    })
-
-                except Exception as e:
-                    logger.error(f"Error processing query: {e}", exc_info=True)
-                    return jsonify({
-                        "text": f"Hello {user_name}! Type `help` to see what I can do."
-                    })
+                # Send response
+                if space_name:
+                    send_chat_message(space_name, response_text, thread_name=thread_name)
+                    return jsonify({}), 200
+                else:
+                    return jsonify({"text": response_text})
 
         # Handle card button clicks (interactive actions)
         elif event_type == 'CARD_CLICKED':

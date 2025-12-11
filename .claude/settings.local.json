@@ -44,7 +44,8 @@
       "Bash(tee:*)",
       "Bash(gcloud run deploy:*)",
       "Bash(tr:*)",
-      "Bash(gcloud iam service-accounts describe:*)"
+      "Bash(gcloud iam service-accounts describe:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []

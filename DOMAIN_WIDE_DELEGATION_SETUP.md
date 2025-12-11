@@ -92,8 +92,19 @@ EOF
 ## Step 4: Update Application Code (Already Done)
 
 The code has been updated to support domain-wide delegation:
-- `NotificationService._get_chat_service(impersonate_user=email)` now supports impersonation
-- `send_approval_chat_card()` will use delegation when available
+
+### How It Works
+1. **Admin Impersonation**: When sending notifications, the service impersonates `WORKSPACE_ADMIN_EMAIL` (dirk@edvolution.io)
+2. **Credential Delegation**: `NotificationService._get_chat_service(impersonate_user=admin_email)` uses `credentials.with_subject(admin_email)`
+3. **DM Space Creation**: Acting as the admin, the service finds or creates a DM space with the target user
+4. **Message Delivery**: The interactive card is sent to the DM space
+5. **User Experience**: The approver receives a Google Chat notification (just like Google Drive sends notifications)
+
+### Code Changes
+- `NotificationService._get_chat_service(impersonate_user=email)` - supports user impersonation
+- `send_direct_message(user_email, message, impersonate_admin=email)` - uses delegation to send DMs
+- `send_approval_chat_card(..., impersonate_admin=email)` - uses delegation to send interactive cards
+- Both methods default to using `WORKSPACE_ADMIN_EMAIL` from settings
 
 ---
 

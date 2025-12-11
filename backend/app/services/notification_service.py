@@ -159,26 +159,67 @@ class NotificationService:
             logger.error(f"Failed to send chat message: {str(e)}")
             return False
 
-    def send_direct_message(self, user_email: str, message_text: str) -> bool:
+    def send_direct_message(self, user_email: str, message_text: str, impersonate_admin: str = None) -> bool:
         """
-        Send a direct message to a user via Google Chat
-
-        NOTE: Google Chat bots with service account auth cannot proactively
-        create DM spaces. This method will always return False.
-        Use email notifications or have users message the bot instead.
+        Send a direct message to a user via Google Chat using domain-wide delegation
 
         Args:
             user_email: The user's email address
             message_text: The message to send
+            impersonate_admin: Admin email to impersonate (required for proactive DMs)
 
         Returns:
-            Always False (Chat bots cannot create DM spaces proactively)
+            True if successful, False otherwise
         """
-        logger.info(
-            f"Skipping Chat DM to {user_email}. "
-            "Service account bots cannot create DM spaces. Use email instead."
-        )
-        return False
+        from backend.config.settings import WORKSPACE_ADMIN_EMAIL
+
+        # Use provided admin or fall back to settings
+        admin_email = impersonate_admin or WORKSPACE_ADMIN_EMAIL
+
+        if not admin_email:
+            logger.error("Cannot send DM: WORKSPACE_ADMIN_EMAIL not configured")
+            return False
+
+        try:
+            # Get Chat service with admin impersonation for domain-wide delegation
+            chat = self._get_chat_service(impersonate_user=admin_email)
+
+            # Find or create direct message space with the user
+            # When impersonating the admin, we can create a DM space with the target user
+            try:
+                # Try to find existing DM space
+                response = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
+                space_name = response.get('name')
+                logger.info(f"Found existing DM space with {user_email}: {space_name}")
+            except Exception as find_error:
+                logger.info(f"No existing DM space found with {user_email}, creating new one: {find_error}")
+                # Create new DM space
+                response = chat.spaces().setup(body={
+                    'space': {
+                        'spaceType': 'DIRECT_MESSAGE'
+                    },
+                    'membershipInvitation': {
+                        'user': {
+                            'name': f'users/{user_email}'
+                        }
+                    }
+                }).execute()
+                space_name = response.get('space', {}).get('name')
+                logger.info(f"Created new DM space with {user_email}: {space_name}")
+
+            # Send the message to the DM space
+            message = {'text': message_text}
+            result = chat.spaces().messages().create(
+                parent=space_name,
+                body=message
+            ).execute()
+
+            logger.info(f"Successfully sent DM to {user_email} (impersonating {admin_email}): {result.get('name')}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to send DM to {user_email}: {str(e)}", exc_info=True)
+            return False
 
     def send_approval_chat_card(
         self,
@@ -192,10 +233,11 @@ class NotificationService:
         notes: Optional[str] = None,
         request_id: Optional[str] = None,
         approval_level: str = "manager",
-        portal_url: str = "http://localhost:8080"
+        portal_url: str = "http://localhost:8080",
+        impersonate_admin: str = None
     ) -> bool:
         """
-        Send an approval notification via Google Chat with interactive card
+        Send an approval notification via Google Chat with interactive card using domain-wide delegation
 
         Args:
             user_email: Email of the approver
@@ -209,6 +251,7 @@ class NotificationService:
             request_id: Request ID
             approval_level: "manager" or "admin"
             portal_url: Base URL of the portal
+            impersonate_admin: Admin email to impersonate (required for proactive notifications)
 
         Returns:
             True if successful, False otherwise
@@ -217,8 +260,18 @@ class NotificationService:
             logger.info("Chat notifications disabled, skipping")
             return True
 
+        from backend.config.settings import WORKSPACE_ADMIN_EMAIL
+
+        # Use provided admin or fall back to settings
+        admin_email = impersonate_admin or WORKSPACE_ADMIN_EMAIL
+
+        if not admin_email:
+            logger.error("Cannot send Chat card: WORKSPACE_ADMIN_EMAIL not configured")
+            return False
+
         try:
-            chat = self._get_chat_service()
+            # Get Chat service with admin impersonation for domain-wide delegation
+            chat = self._get_chat_service(impersonate_user=admin_email)
 
             timeoff_label = timeoff_type.replace('_', ' ').title()
 
@@ -294,27 +347,36 @@ class NotificationService:
                 }]
             })
 
-            # IMPORTANT: Google Chat bots with service account auth cannot proactively
-            # create DM spaces or find users by email. This is a Chat API limitation.
-            # Bots can only send messages to spaces where they've been added.
-            #
-            # Solution: We cannot send proactive approval cards via Chat.
-            # Instead, users should:
-            # 1. Check pending approvals via "pending" command in Chat
-            # 2. Receive email notifications
-            # 3. Use the web portal
-            #
-            # We'll log this limitation and fall back to email notification.
+            # Find or create DM space with the approver (using admin impersonation)
+            try:
+                # Try to find existing DM space
+                response = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
+                space_name = response.get('name')
+                logger.info(f"Found existing DM space with {user_email}: {space_name}")
+            except Exception as find_error:
+                logger.info(f"No existing DM space found with {user_email}, creating new one: {find_error}")
+                # Create new DM space
+                response = chat.spaces().setup(body={
+                    'space': {
+                        'spaceType': 'DIRECT_MESSAGE'
+                    },
+                    'membershipInvitation': {
+                        'user': {
+                            'name': f'users/{user_email}'
+                        }
+                    }
+                }).execute()
+                space_name = response.get('space', {}).get('name')
+                logger.info(f"Created new DM space with {user_email}: {space_name}")
 
-            logger.warning(
-                f"Cannot send proactive Chat notification to {user_email}. "
-                "Google Chat bots with service accounts cannot create DM spaces. "
-                "User will receive email notification instead. "
-                "For Chat notifications, users should message the bot with 'pending' command."
-            )
+            # Send the card to the DM space
+            result = chat.spaces().messages().create(
+                parent=space_name,
+                body=card_message
+            ).execute()
 
-            # Skip Chat notification - will fall back to email in the calling code
-            return False
+            logger.info(f"Successfully sent approval card to {user_email} (impersonating {admin_email}): {result.get('name')}")
+            return True
 
         except Exception as e:
             logger.error(f"Failed to send approval card to {user_email}: {str(e)}", exc_info=True)
@@ -331,7 +393,7 @@ class NotificationService:
 
                 simple_message += f"\n\nPlease log in to the Employee Portal to review this {approval_level} approval request."
 
-                return self.send_direct_message(user_email, simple_message)
+                return self.send_direct_message(user_email, simple_message, impersonate_admin=admin_email)
             except Exception as fallback_error:
                 logger.error(f"Fallback message also failed: {fallback_error}")
                 return False

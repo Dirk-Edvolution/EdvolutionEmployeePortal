@@ -333,23 +333,33 @@ Add these scopes to your Google OAuth consent screen:
 
 ### Approval notifications not received
 
-**IMPORTANT LIMITATION:** Google Chat bots using service account authentication **cannot proactively send DM messages** to users. This is a Google Chat API restriction.
+**SOLUTION: Domain-Wide Delegation Required**
 
-**What this means:**
-- ❌ The bot cannot send approval cards automatically when requests are created
+Proactive Google Chat notifications require **domain-wide delegation** to be configured. This allows the service account to impersonate an admin user and send DM messages on their behalf (just like Google Drive sends you notifications).
+
+**Setup Status:**
+- ✅ Code is updated to support domain-wide delegation
+- ⚠️ **Admin Console configuration required** (see [DOMAIN_WIDE_DELEGATION_SETUP.md](DOMAIN_WIDE_DELEGATION_SETUP.md))
+
+**After domain-wide delegation is configured:**
+- ✅ Managers receive Google Chat cards automatically when time-off requests are created
+- ✅ Admins receive Google Chat cards when manager approves
+- ✅ Employees receive Google Chat status updates
+- ✅ All users also receive email notifications
+
+**Without domain-wide delegation:**
+- ❌ No proactive Chat notifications
+- ✅ Users receive **email notifications** for approvals
 - ✅ The bot CAN respond to commands like `pending`, `help`, `status`
-- ✅ Users will receive **email notifications** for approvals
 - ✅ Users can check pending approvals by messaging the bot with `pending`
 
-**Recommended workflow:**
-1. Employee creates time-off request
-2. Manager receives **email notification**
-3. Manager can either:
-   - Approve via web portal
-   - Message the bot with `pending` to see all pending approvals
-   - Click email link to go directly to the request
+**To enable proactive Chat notifications:**
+1. Follow the setup guide: [DOMAIN_WIDE_DELEGATION_SETUP.md](DOMAIN_WIDE_DELEGATION_SETUP.md)
+2. Update Google Workspace Admin Console with the OAuth scope: `https://www.googleapis.com/auth/chat.messages`
+3. Wait 10-15 minutes for changes to propagate
+4. Test by creating a time-off request
 
-If you still want to troubleshoot Chat functionality:
+If Chat notifications still aren't working after setup:
 
 1. **Check if Chat notifications are enabled:**
    ```bash

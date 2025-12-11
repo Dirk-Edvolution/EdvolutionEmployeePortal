@@ -10,11 +10,11 @@ OAuth 2.0 Web Client ID (for front-end login):
 844588465159-6u1fddcv01484hood782ht9a6tpv9i17.apps.googleusercontent.com
 
 OAuth Scopes (copy all as one line, comma-separated):
-https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/calendar,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/gmail.settings.basic,https://www.googleapis.com/auth/gmail.settings.sharing,https://www.googleapis.com/auth/chat.bot,https://www.googleapis.com/auth/chat.messages
+https://www.googleapis.com/auth/admin.directory.user,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/calendar,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/gmail.settings.basic,https://www.googleapis.com/auth/gmail.settings.sharing,https://www.googleapis.com/auth/chat.bot,https://www.googleapis.com/auth/chat.messages,https://www.googleapis.com/auth/chat.spaces
 
 Instructions:
 1. Go to: https://admin.google.com/ac/owl/domainwidedelegation
 2. Click "Add new"
-3. Paste the FULL Client ID above (including .apps.googleusercontent.com)
-4. Paste all the OAuth scopes (comma-separated, no spaces)
+3. Paste the **Service Account's Unique ID** (a large number, NOT the ID ending in .apps.googleusercontent.com).
+4. Paste all the OAuth scopes from above (comma-separated, no spaces).
 5. Click "Authorize"

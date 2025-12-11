@@ -1,84 +1,102 @@
 import os
 import json
-import google.auth
-from google.auth import impersonated_credentials
+import requests
 from google.oauth2 import service_account
-from google.auth.transport.requests import AuthorizedSession
+from google.auth import default as google_auth_default
+from google.auth.transport.requests import Request
+import time
 
 def test_chat_impersonation():
     """
-    Tests the ability of the service account to impersonate an admin
-    and send a Google Chat message.
+    Tests the full Domain-Wide Delegation flow by using gcloud to generate
+    the necessary tokens and then calling the Google Chat API.
     """
     print("🚀 Starting Google Chat impersonation test...")
 
     try:
-        # --- 1. Load Configuration & Credentials ---
         # --- 1. Configuration ---
         admin_to_impersonate = os.environ.get('ADMIN_USERS', 'dirk@edvolution.io')
-        target_user_email = admin_to_impersonate # For this test, we'll message ourselves.
+        # Ensure admin_to_impersonate is just the email, not a comma-separated list
+        if ',' in admin_to_impersonate:
+            admin_to_impersonate = admin_to_impersonate.split(',')[0].strip()
+
         service_account_email = "employee-portal-runtime@edvolution-admon.iam.gserviceaccount.com"
-        scopes = ['https://www.googleapis.com/auth/chat.messages']
-        creds = None
+        # Scopes needed for DWD: chat.messages for sending, chat.spaces for finding/creating DM spaces
+        chat_scopes = [
+            'https://www.googleapis.com/auth/chat.messages',
+            'https://www.googleapis.com/auth/chat.spaces'
+        ]
 
-        # This logic supports two environments:
-        # 1. CI/CD (like GitHub Actions) where GCP_CREDENTIALS is a secret.
-        # 2. Local/Cloud Shell where Application Default Credentials are used.
-        credentials_json_str = os.environ.get('GCP_CREDENTIALS')
-        if credentials_json_str:
-            print("🔑 Authenticating with GCP_CREDENTIALS environment variable...")
-            creds_info = json.loads(credentials_json_str)
-            creds = service_account.Credentials.from_service_account_info(creds_info)
-        else:
-            print("🔑 Authenticating with Application Default Credentials.")
-            print("   (Expecting an impersonated service account in this environment).")
-            creds, _ = google.auth.default()
-        # --- 2. Authenticate and Impersonate Service Account ---
-        # In Cloud Shell, google.auth.default() gets your user credentials.
-        # We use these to impersonate the service account.
-        print(f"� Using user credentials to impersonate service account: {service_account_email}")
-        source_credentials, _ = google.auth.default()
+        # --- 2. Obtain Service Account Credentials for Domain-Wide Delegation ---
+        # This requires the service account's private key, typically from a JSON file
+        # or an environment variable containing the JSON content.
+        # or by using Application Default Credentials (ADC) via `gcloud auth`.
+        print(f"🔑 Attempting to load service account credentials for DWD...")
 
-        # This creates credentials that act AS the service account.
-        sa_credentials = impersonated_credentials.Credentials(
-            source_credentials=source_credentials,
-            target_principal=service_account_email,
-            target_scopes=['https://www.googleapis.com/auth/cloud-platform'], # Scopes for the SA itself
-        )
-
-        print(f"�👤 Admin to Impersonate: {admin_to_impersonate}")
-
-        # --- 2. Create Impersonated Credentials ---
-        impersonated_creds = creds.with_subject(admin_to_impersonate).with_scopes(scopes)
-        # --- 3. Use Service Account to Impersonate User (Domain-Wide Delegation) ---
-        # This is the second impersonation step.
-        # We use the SA creds to act ON BEHALF OF the end user.
-        user_impersonation_creds = sa_credentials.with_subject(admin_to_impersonate).with_scopes(scopes)
-        print("✅ Successfully created impersonated credentials.")
-
-        # --- 3. Send Chat Message ---
-        authed_session = AuthorizedSession(impersonated_creds)
-        # --- 4. Send Chat Message ---
-        authed_session = AuthorizedSession(user_impersonation_creds)
-        url = f"https://chat.googleapis.com/v1/spaces/users/{target_user_email}/messages"
-        message_body = {'text': '✅ Test Message: Service account impersonation for Google Chat is working correctly!'}
+        service_account_key_json = os.environ.get('GCP_SERVICE_ACCOUNT_KEY_JSON')
+        if not service_account_key_json:
+            raise ValueError(
+                "GCP_SERVICE_ACCOUNT_KEY_JSON environment variable not set. "
+                "It should contain the JSON content of your service account key."
+            )
+        service_account_info = json.loads(service_account_key_json)
         
-        print(f"📬 Sending test message to {target_user_email}...")
-        response = authed_session.post(url, json=message_body)
+        # Create credentials that impersonate the target user (Domain-Wide Delegation)
+        user_creds = service_account.Credentials.from_service_account_info(
+            service_account_info,
+            subject=admin_to_impersonate,
+            scopes=chat_scopes
+        )
+        
+        # Refresh the token to get an access token for the impersonated user
+        user_creds.refresh(Request())
+        if not user_creds.token:
+            raise Exception("Failed to obtain user-impersonated access token.")
+
+        print(f"✅ Successfully obtained user-impersonated access token for {admin_to_impersonate}.")
+
+        # --- 3. Find or Create Direct Message (DM) Space using the setup endpoint ---
+        # This is the modern, idempotent way to get a DM space. It will either
+        # find the existing DM space or create a new one if it doesn't exist.
+        print(f"🔍 Finding or creating DM space with {admin_to_impersonate}...")
+        headers = {
+            "Authorization": f"Bearer {user_creds.token}",
+            "Content-Type": "application/json"
+        }
+        setup_space_url = "https://chat.googleapis.com/v1/spaces:setup"
+        setup_payload = {"member": f"users/{admin_to_impersonate}"}
+        
+        setup_response = requests.post(setup_space_url, headers=headers, json=setup_payload)
+        setup_response.raise_for_status()
+        dm_space_name = setup_response.json().get('name')
+        
+        if not dm_space_name:
+            raise Exception("Failed to find or create DM space using the setup endpoint.")
+        print(f"   ✓ Successfully found/created DM space: {dm_space_name}")
+
+        # --- 4. Send the Google Chat message to the DM space ---
+        print(f"📬 Sending test message to DM space {dm_space_name}...")
+        send_message_url = f"https://chat.googleapis.com/v1/{dm_space_name}/messages"
+        message_body = {'text': '✅ Test Message: Service account impersonation for Google Chat is working correctly!'}
+        response = requests.post(send_message_url, headers=headers, json=message_body)
         response.raise_for_status()
 
         print("\n🎉 SUCCESS! The test message was sent successfully.")
         print("Please check your Google Chat for a message from the 'Google Chat App'.")
 
     except Exception as e:
-        print(f"\n❌ FAILURE: The test failed. Reason: {e}")
-        print("\nTroubleshooting Steps:")
-        print("1. If running locally, did you impersonate the service account first?")
-        print("   gcloud auth application-default login --impersonate-service-account=\"employee-portal-runtime@edvolution-admon.iam.gserviceaccount.com\"")
+        error_details = ""
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_details = f"API Response: {json.dumps(e.response.json(), indent=2)}"
+            except json.JSONDecodeError:
+                error_details = f"API Response: {e.response.text}"
+        print(f"\n❌ FAILURE: The test failed. Reason: {e}\n{error_details}")
         print("\n📋 Troubleshooting Steps:")
-        print("1. Is your logged-in user granted the 'Service Account Token Creator' role on the service account?")
+        print("1. Ensure the `GCP_SERVICE_ACCOUNT_KEY_JSON` environment variable is set with the correct service account key JSON content.")
         print("2. Has the service account's Client ID been granted Domain-Wide Delegation in the Google Workspace Admin Console?")
-        print("3. Does the delegation include the 'https://www.googleapis.com/auth/chat.messages' scope?")
+        print("3. Does the delegation include the 'https://www.googleapis.com/auth/chat.messages' and 'https://www.googleapis.com/auth/chat.spaces' scopes?")
+        print("4. Is the `admin_to_impersonate` email (e.g., dirk@edvolution.io) a valid user in your Google Workspace?")
 
 if __name__ == "__main__":
     test_chat_impersonation()

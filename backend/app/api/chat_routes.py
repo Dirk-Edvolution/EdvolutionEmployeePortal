@@ -188,8 +188,9 @@ def chat_webhook():
     """
     try:
         event = request.get_json()
-        # Log the full event for debugging
-        logger.info(f"Received Chat event - Full payload: {event}")
+
+        # Print to stdout so it shows in Cloud Run logs
+        print(f"[CHAT-DEBUG] Received event: {event}", flush=True)
 
         # Google Chat uses different event structures
         # Check for both 'type' and 'eventType' fields
@@ -199,7 +200,7 @@ def chat_webhook():
         if not event_type and event.get('message'):
             event_type = 'MESSAGE'
 
-        logger.info(f"Event type: {event_type}")
+        print(f"[CHAT-DEBUG] Event type: {event_type}", flush=True)
 
         # Handle bot added to space
         if event_type == 'ADDED_TO_SPACE':

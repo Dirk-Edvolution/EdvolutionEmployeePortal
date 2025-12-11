@@ -333,7 +333,23 @@ Add these scopes to your Google OAuth consent screen:
 
 ### Approval notifications not received
 
-If you're not receiving Chat messages when approval requests are created:
+**IMPORTANT LIMITATION:** Google Chat bots using service account authentication **cannot proactively send DM messages** to users. This is a Google Chat API restriction.
+
+**What this means:**
+- ❌ The bot cannot send approval cards automatically when requests are created
+- ✅ The bot CAN respond to commands like `pending`, `help`, `status`
+- ✅ Users will receive **email notifications** for approvals
+- ✅ Users can check pending approvals by messaging the bot with `pending`
+
+**Recommended workflow:**
+1. Employee creates time-off request
+2. Manager receives **email notification**
+3. Manager can either:
+   - Approve via web portal
+   - Message the bot with `pending` to see all pending approvals
+   - Click email link to go directly to the request
+
+If you still want to troubleshoot Chat functionality:
 
 1. **Check if Chat notifications are enabled:**
    ```bash

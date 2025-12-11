@@ -128,57 +128,22 @@ class NotificationService:
         """
         Send a direct message to a user via Google Chat
 
+        NOTE: Google Chat bots with service account auth cannot proactively
+        create DM spaces. This method will always return False.
+        Use email notifications or have users message the bot instead.
+
         Args:
             user_email: The user's email address
             message_text: The message to send
 
         Returns:
-            True if successful, False otherwise
+            Always False (Chat bots cannot create DM spaces proactively)
         """
-        try:
-            chat = self._get_chat_service()
-
-            # Find or create DM space with the user
-            try:
-                # Try to find existing DM space using findDirectMessage
-                space = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
-                space_name = space.get('name')
-                logger.info(f"Found existing DM space with {user_email}: {space_name}")
-            except Exception as find_error:
-                logger.info(f"No existing DM space found for {user_email}, creating new one: {find_error}")
-                # Create a new DM space using setup
-                try:
-                    space = chat.spaces().setup(body={
-                        'space': {
-                            'spaceType': 'DIRECT_MESSAGE'
-                        },
-                        'membershipInvitation': {
-                            'user': {
-                                'name': f'users/{user_email}'
-                            }
-                        }
-                    }).execute()
-                    space_name = space.get('name')
-                    logger.info(f"Created new DM space with {user_email}: {space_name}")
-                except Exception as create_error:
-                    logger.error(f"Failed to create DM space for {user_email}: {create_error}")
-                    raise
-
-            # Send the message
-            message = {
-                'text': message_text
-            }
-
-            response = chat.spaces().messages().create(
-                parent=space_name,
-                body=message
-            ).execute()
-
-            logger.info(f"Direct message sent to {user_email}: {response.get('name')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send direct message to {user_email}: {str(e)}", exc_info=True)
-            return False
+        logger.info(
+            f"Skipping Chat DM to {user_email}. "
+            "Service account bots cannot create DM spaces. Use email instead."
+        )
+        return False
 
     def send_approval_chat_card(
         self,
@@ -294,40 +259,27 @@ class NotificationService:
                 }]
             })
 
-            # Find or create DM space with the user
-            try:
-                # Try to find existing DM space using findDirectMessage
-                space = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
-                space_name = space.get('name')
-                logger.info(f"Found existing DM space with {user_email}: {space_name}")
-            except Exception as find_error:
-                logger.info(f"No existing DM space found for {user_email}, creating new one: {find_error}")
-                # Create a new DM space using setup
-                try:
-                    space = chat.spaces().setup(body={
-                        'space': {
-                            'spaceType': 'DIRECT_MESSAGE'
-                        },
-                        'membershipInvitation': {
-                            'user': {
-                                'name': f'users/{user_email}'
-                            }
-                        }
-                    }).execute()
-                    space_name = space.get('name')
-                    logger.info(f"Created new DM space with {user_email}: {space_name}")
-                except Exception as create_error:
-                    logger.error(f"Failed to create DM space for {user_email}: {create_error}")
-                    raise
+            # IMPORTANT: Google Chat bots with service account auth cannot proactively
+            # create DM spaces or find users by email. This is a Chat API limitation.
+            # Bots can only send messages to spaces where they've been added.
+            #
+            # Solution: We cannot send proactive approval cards via Chat.
+            # Instead, users should:
+            # 1. Check pending approvals via "pending" command in Chat
+            # 2. Receive email notifications
+            # 3. Use the web portal
+            #
+            # We'll log this limitation and fall back to email notification.
 
-            # Send the card message
-            response = chat.spaces().messages().create(
-                parent=space_name,
-                body=card_message
-            ).execute()
+            logger.warning(
+                f"Cannot send proactive Chat notification to {user_email}. "
+                "Google Chat bots with service accounts cannot create DM spaces. "
+                "User will receive email notification instead. "
+                "For Chat notifications, users should message the bot with 'pending' command."
+            )
 
-            logger.info(f"Approval card sent to {user_email}: {response.get('name')}")
-            return True
+            # Skip Chat notification - will fall back to email in the calling code
+            return False
 
         except Exception as e:
             logger.error(f"Failed to send approval card to {user_email}: {str(e)}", exc_info=True)

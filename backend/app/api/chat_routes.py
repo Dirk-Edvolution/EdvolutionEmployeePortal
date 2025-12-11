@@ -329,9 +329,12 @@ def chat_webhook():
             elif 'pending' in message_text:
                 # user_email already extracted above
                 if not user_email:
-                    return jsonify({
-                        "text": "❌ Could not identify your email address."
-                    })
+                    response_text = "❌ Could not identify your email address."
+                    if space_name:
+                        send_chat_message(space_name, response_text, thread_name=thread_name)
+                        return jsonify({}), 200
+                    else:
+                        return jsonify({"text": response_text})
 
                 # Query pending approvals for this user
                 db = FirestoreService()
@@ -347,9 +350,7 @@ def chat_webhook():
                 total_pending = len(manager_requests) + len(admin_requests)
 
                 if total_pending == 0:
-                    return jsonify({
-                        "text": f"✅ You have no pending time-off approvals, {user_name}!"
-                    })
+                    response_text = f"✅ You have no pending time-off approvals, {user_name}!"
                 else:
                     response_text = f"📋 You have *{total_pending}* pending approval(s):\n\n"
 
@@ -361,6 +362,11 @@ def chat_webhook():
 
                     response_text += "\nYou'll receive interactive cards for each request."
 
+                # Send via Chat API if we have space info
+                if space_name:
+                    send_chat_message(space_name, response_text, thread_name=thread_name)
+                    return jsonify({}), 200
+                else:
                     return jsonify({"text": response_text})
 
             else:

@@ -59,9 +59,28 @@ class NotificationService:
         raise last_error
 
     def _get_chat_service(self):
-        """Lazy load Google Chat service"""
+        """Lazy load Google Chat service using Application Default Credentials for bot operations"""
         if not self.chat_service:
-            self.chat_service = build('chat', 'v1', credentials=self.credentials)
+            # Use Application Default Credentials for Chat Bot API
+            # This allows the bot to send messages on behalf of the app
+            from google.auth import default
+            from google.auth.transport.requests import Request
+
+            try:
+                # Use ADC with chat.bot scope for bot operations
+                credentials, project = default(scopes=['https://www.googleapis.com/auth/chat.bot'])
+
+                # Refresh credentials if needed
+                if not credentials.valid:
+                    credentials.refresh(Request())
+
+                self.chat_service = build('chat', 'v1', credentials=credentials)
+                logger.info("Initialized Chat service with Application Default Credentials (bot scope)")
+            except Exception as e:
+                logger.warning(f"Could not initialize Chat service with ADC, falling back to user credentials: {e}")
+                # Fallback to user credentials if ADC not available (local development)
+                self.chat_service = build('chat', 'v1', credentials=self.credentials)
+
         return self.chat_service
 
     def _get_gmail_service(self):
@@ -119,12 +138,31 @@ class NotificationService:
         try:
             chat = self._get_chat_service()
 
-            # Create a DM space with the user
-            space = chat.spaces().create(body={
-                'type': 'DIRECT_MESSAGE',
-                'singleUserBotDm': False,
-                'displayName': f'DM with {user_email}'
-            }).execute()
+            # Find or create DM space with the user
+            try:
+                # Try to find existing DM space using findDirectMessage
+                space = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
+                space_name = space.get('name')
+                logger.info(f"Found existing DM space with {user_email}: {space_name}")
+            except Exception as find_error:
+                logger.info(f"No existing DM space found for {user_email}, creating new one: {find_error}")
+                # Create a new DM space using setup
+                try:
+                    space = chat.spaces().setup(body={
+                        'space': {
+                            'spaceType': 'DIRECT_MESSAGE'
+                        },
+                        'membershipInvitation': {
+                            'user': {
+                                'name': f'users/{user_email}'
+                            }
+                        }
+                    }).execute()
+                    space_name = space.get('name')
+                    logger.info(f"Created new DM space with {user_email}: {space_name}")
+                except Exception as create_error:
+                    logger.error(f"Failed to create DM space for {user_email}: {create_error}")
+                    raise
 
             # Send the message
             message = {
@@ -132,14 +170,14 @@ class NotificationService:
             }
 
             response = chat.spaces().messages().create(
-                parent=space['name'],
+                parent=space_name,
                 body=message
             ).execute()
 
             logger.info(f"Direct message sent to {user_email}: {response.get('name')}")
             return True
         except Exception as e:
-            logger.error(f"Failed to send direct message to {user_email}: {str(e)}")
+            logger.error(f"Failed to send direct message to {user_email}: {str(e)}", exc_info=True)
             return False
 
     def send_approval_chat_card(
@@ -256,16 +294,35 @@ class NotificationService:
                 }]
             })
 
-            # Create a DM space with the user
-            space = chat.spaces().create(body={
-                'type': 'DIRECT_MESSAGE',
-                'singleUserBotDm': False,
-                'displayName': f'DM with {user_email}'
-            }).execute()
+            # Find or create DM space with the user
+            try:
+                # Try to find existing DM space using findDirectMessage
+                space = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
+                space_name = space.get('name')
+                logger.info(f"Found existing DM space with {user_email}: {space_name}")
+            except Exception as find_error:
+                logger.info(f"No existing DM space found for {user_email}, creating new one: {find_error}")
+                # Create a new DM space using setup
+                try:
+                    space = chat.spaces().setup(body={
+                        'space': {
+                            'spaceType': 'DIRECT_MESSAGE'
+                        },
+                        'membershipInvitation': {
+                            'user': {
+                                'name': f'users/{user_email}'
+                            }
+                        }
+                    }).execute()
+                    space_name = space.get('name')
+                    logger.info(f"Created new DM space with {user_email}: {space_name}")
+                except Exception as create_error:
+                    logger.error(f"Failed to create DM space for {user_email}: {create_error}")
+                    raise
 
             # Send the card message
             response = chat.spaces().messages().create(
-                parent=space['name'],
+                parent=space_name,
                 body=card_message
             ).execute()
 
@@ -273,7 +330,7 @@ class NotificationService:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to send approval card to {user_email}: {str(e)}")
+            logger.error(f"Failed to send approval card to {user_email}: {str(e)}", exc_info=True)
             # Fall back to simple text message
             try:
                 simple_message = f"""🔔 **Time-Off Approval Required**

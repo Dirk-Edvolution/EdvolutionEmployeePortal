@@ -200,6 +200,10 @@ def chat_webhook():
         if not event_type and event.get('message'):
             event_type = 'MESSAGE'
 
+        # Check for chat.messagePayload structure (interactive/DM messages)
+        if not event_type and event.get('chat', {}).get('messagePayload'):
+            event_type = 'MESSAGE'
+
         print(f"[CHAT-DEBUG] Event type: {event_type}", flush=True)
 
         # Handle bot added to space
@@ -213,8 +217,24 @@ def chat_webhook():
 
         # Handle messages
         elif event_type == 'MESSAGE':
-            message_text = event.get('message', {}).get('text', '').lower().strip()
-            user_name = event.get('user', {}).get('displayName', 'there')
+            # Extract message text from different possible structures
+            message_text = ''
+            if 'message' in event:
+                message_text = event.get('message', {}).get('text', '')
+            elif 'chat' in event and 'messagePayload' in event['chat']:
+                message_text = event['chat']['messagePayload'].get('message', {}).get('text', '')
+
+            message_text = message_text.lower().strip()
+
+            # Extract user info from different possible structures
+            user_name = 'there'
+            user_email = None
+            if 'user' in event:
+                user_name = event.get('user', {}).get('displayName', 'there')
+                user_email = event.get('user', {}).get('email')
+            elif 'chat' in event and 'user' in event['chat']:
+                user_name = event['chat']['user'].get('displayName', 'there')
+                user_email = event['chat']['user'].get('email')
 
             # Simple command handling
             if 'help' in message_text:
@@ -235,8 +255,7 @@ def chat_webhook():
                 })
 
             elif 'pending' in message_text:
-                # Get user email from the event
-                user_email = event.get('user', {}).get('email')
+                # user_email already extracted above
                 if not user_email:
                     return jsonify({
                         "text": "❌ Could not identify your email address."
@@ -274,7 +293,7 @@ def chat_webhook():
 
             else:
                 # Use quick responses for queries
-                user_email = event.get('user', {}).get('email')
+                # user_email already extracted above
                 if not user_email:
                     return jsonify({
                         "text": "❌ Could not identify your email address."

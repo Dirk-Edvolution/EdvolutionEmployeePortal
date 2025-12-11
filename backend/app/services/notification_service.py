@@ -20,10 +20,62 @@ class NotificationService:
     """Service for sending notifications via Google Chat and Gmail"""
 
     def __init__(self, credentials: Credentials):
-        self.credentials = credentials
+        self.credentials = credentials  # User credentials (for their own actions)
+        self.notification_credentials = None  # Dedicated notification account credentials
         self.chat_service = None
         self.gmail_service = None
         self.tasks_service = None
+
+    def _get_notification_credentials(self):
+        """
+        Load credentials for the dedicated notification account (hola@edvolution.io)
+        from Google Secret Manager
+
+        Returns:
+            Credentials object or None if not available
+        """
+        if self.notification_credentials:
+            return self.notification_credentials
+
+        try:
+            from google.cloud import secretmanager
+            from google.oauth2.credentials import Credentials as OAuth2Credentials
+            import json
+            import os
+
+            # Check if we have a notification account email configured
+            notification_email = os.getenv('NOTIFICATION_ACCOUNT_EMAIL', 'hola@edvolution.io')
+
+            # Try to load credentials from Secret Manager
+            try:
+                client = secretmanager.SecretManagerServiceClient()
+                project_id = os.getenv('GCP_PROJECT_ID', 'edvolution-admon')
+                secret_name = f"projects/{project_id}/secrets/notification-account-credentials/versions/latest"
+
+                response = client.access_secret_version(request={"name": secret_name})
+                credentials_json = json.loads(response.payload.data.decode('UTF-8'))
+
+                # Create OAuth2 credentials from the JSON
+                self.notification_credentials = OAuth2Credentials(
+                    token=credentials_json.get('token'),
+                    refresh_token=credentials_json.get('refresh_token'),
+                    token_uri=credentials_json.get('token_uri'),
+                    client_id=credentials_json.get('client_id'),
+                    client_secret=credentials_json.get('client_secret'),
+                    scopes=credentials_json.get('scopes')
+                )
+
+                logger.info(f"Loaded notification credentials for {notification_email} from Secret Manager")
+                return self.notification_credentials
+
+            except Exception as secret_error:
+                logger.warning(f"Could not load notification credentials from Secret Manager: {secret_error}")
+                logger.info("Falling back to user credentials for notifications")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error getting notification credentials: {e}")
+            return None
 
     def _retry_with_backoff(self, func: Callable, *args, **kwargs) -> Any:
         """
@@ -119,9 +171,24 @@ class NotificationService:
         return self.chat_service
 
     def _get_gmail_service(self):
-        """Lazy load Gmail service"""
+        """
+        Lazy load Gmail service using notification account credentials
+
+        Returns Gmail service authenticated as the notification account (hola@edvolution.io)
+        for sending automated emails.
+        """
         if not self.gmail_service:
-            self.gmail_service = build('gmail', 'v1', credentials=self.credentials)
+            # Try to use notification account credentials
+            notification_creds = self._get_notification_credentials()
+            creds = notification_creds if notification_creds else self.credentials
+
+            self.gmail_service = build('gmail', 'v1', credentials=creds)
+
+            if notification_creds:
+                logger.info("Gmail service initialized with notification account credentials")
+            else:
+                logger.warning("Gmail service initialized with user credentials (notification account not available)")
+
         return self.gmail_service
 
     def _get_tasks_service(self):
@@ -161,38 +228,36 @@ class NotificationService:
 
     def send_direct_message(self, user_email: str, message_text: str, impersonate_admin: str = None) -> bool:
         """
-        Send a direct message to a user via Google Chat using domain-wide delegation
+        Send a direct message to a user via Google Chat using the notification account
+
+        Uses hola@edvolution.io credentials to send DMs (simpler than domain-wide delegation)
 
         Args:
             user_email: The user's email address
             message_text: The message to send
-            impersonate_admin: Admin email to impersonate (required for proactive DMs)
+            impersonate_admin: Deprecated (kept for backward compatibility)
 
         Returns:
             True if successful, False otherwise
         """
-        from backend.config.settings import WORKSPACE_ADMIN_EMAIL
-
-        # Use provided admin or fall back to settings
-        admin_email = impersonate_admin or WORKSPACE_ADMIN_EMAIL
-
-        if not admin_email:
-            logger.error("Cannot send DM: WORKSPACE_ADMIN_EMAIL not configured")
-            return False
-
         try:
-            # Get Chat service with admin impersonation for domain-wide delegation
-            chat = self._get_chat_service(impersonate_user=admin_email)
+            # Get notification account credentials
+            notification_creds = self._get_notification_credentials()
+            if not notification_creds:
+                logger.warning("No notification account credentials available, cannot send Chat DM")
+                return False
+
+            # Build Chat service with notification account credentials
+            chat = build('chat', 'v1', credentials=notification_creds)
 
             # Find or create direct message space with the user
-            # When impersonating the admin, we can create a DM space with the target user
             try:
-                # Try to find existing DM space
+                # Try to find existing DM space between notification account and target user
                 response = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
                 space_name = response.get('name')
                 logger.info(f"Found existing DM space with {user_email}: {space_name}")
             except Exception as find_error:
-                logger.info(f"No existing DM space found with {user_email}, creating new one: {find_error}")
+                logger.info(f"No existing DM space found with {user_email}, creating new one")
                 # Create new DM space
                 response = chat.spaces().setup(body={
                     'space': {
@@ -214,7 +279,7 @@ class NotificationService:
                 body=message
             ).execute()
 
-            logger.info(f"Successfully sent DM to {user_email} (impersonating {admin_email}): {result.get('name')}")
+            logger.info(f"Successfully sent DM to {user_email} from notification account: {result.get('name')}")
             return True
 
         except Exception as e:
@@ -237,7 +302,9 @@ class NotificationService:
         impersonate_admin: str = None
     ) -> bool:
         """
-        Send an approval notification via Google Chat with interactive card using domain-wide delegation
+        Send an approval notification via Google Chat with interactive card using notification account
+
+        Uses hola@edvolution.io credentials to send approval cards
 
         Args:
             user_email: Email of the approver
@@ -251,7 +318,7 @@ class NotificationService:
             request_id: Request ID
             approval_level: "manager" or "admin"
             portal_url: Base URL of the portal
-            impersonate_admin: Admin email to impersonate (required for proactive notifications)
+            impersonate_admin: Deprecated (kept for backward compatibility)
 
         Returns:
             True if successful, False otherwise
@@ -260,18 +327,15 @@ class NotificationService:
             logger.info("Chat notifications disabled, skipping")
             return True
 
-        from backend.config.settings import WORKSPACE_ADMIN_EMAIL
-
-        # Use provided admin or fall back to settings
-        admin_email = impersonate_admin or WORKSPACE_ADMIN_EMAIL
-
-        if not admin_email:
-            logger.error("Cannot send Chat card: WORKSPACE_ADMIN_EMAIL not configured")
-            return False
-
         try:
-            # Get Chat service with admin impersonation for domain-wide delegation
-            chat = self._get_chat_service(impersonate_user=admin_email)
+            # Get notification account credentials
+            notification_creds = self._get_notification_credentials()
+            if not notification_creds:
+                logger.warning("No notification account credentials available, cannot send Chat card")
+                return False
+
+            # Build Chat service with notification account credentials
+            chat = build('chat', 'v1', credentials=notification_creds)
 
             timeoff_label = timeoff_type.replace('_', ' ').title()
 
@@ -347,14 +411,14 @@ class NotificationService:
                 }]
             })
 
-            # Find or create DM space with the approver (using admin impersonation)
+            # Find or create DM space with the approver (using notification account)
             try:
-                # Try to find existing DM space
+                # Try to find existing DM space between notification account and approver
                 response = chat.spaces().findDirectMessage(name=f"users/{user_email}").execute()
                 space_name = response.get('name')
                 logger.info(f"Found existing DM space with {user_email}: {space_name}")
             except Exception as find_error:
-                logger.info(f"No existing DM space found with {user_email}, creating new one: {find_error}")
+                logger.info(f"No existing DM space found with {user_email}, creating new one")
                 # Create new DM space
                 response = chat.spaces().setup(body={
                     'space': {
@@ -375,13 +439,14 @@ class NotificationService:
                 body=card_message
             ).execute()
 
-            logger.info(f"Successfully sent approval card to {user_email} (impersonating {admin_email}): {result.get('name')}")
+            logger.info(f"Successfully sent approval card to {user_email} from notification account: {result.get('name')}")
             return True
 
         except Exception as e:
             logger.error(f"Failed to send approval card to {user_email}: {str(e)}", exc_info=True)
             # Fall back to simple text message
             try:
+                timeoff_label = timeoff_type.replace('_', ' ').title()
                 simple_message = f"""🔔 **Time-Off Approval Required**
 
 **Employee:** {employee_name} ({employee_email})
@@ -393,7 +458,7 @@ class NotificationService:
 
                 simple_message += f"\n\nPlease log in to the Employee Portal to review this {approval_level} approval request."
 
-                return self.send_direct_message(user_email, simple_message, impersonate_admin=admin_email)
+                return self.send_direct_message(user_email, simple_message)
             except Exception as fallback_error:
                 logger.error(f"Fallback message also failed: {fallback_error}")
                 return False

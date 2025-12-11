@@ -1551,7 +1551,7 @@ Each audit log must include:
 | GOOGLE_API_KEY | No | Gemini AI API key | AIza... |
 | WORKSPACE_DOMAIN | Yes | Google Workspace domain | company.com |
 | WORKSPACE_ADMIN_EMAIL | Yes | Workspace admin email | admin@company.com |
-| ADMIN_USERS | Yes | Comma-separated admin emails | admin@company.com,hr@company.com |
+| ADMIN_USERS | Yes | Comma-separated admin emails | dirk@edvolution.io,mgonzalez@edvolution.io,gabriela@edvolution.io |
 | FLASK_SECRET_KEY | Yes | Flask session secret | random-secret-key-here |
 | FLASK_ENV | No | Environment (production/development) | production |
 | ENABLE_CHAT_NOTIFICATIONS | No | Enable Google Chat notifications | true |

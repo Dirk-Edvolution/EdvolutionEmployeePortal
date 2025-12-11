@@ -331,6 +331,69 @@ Add these scopes to your Google OAuth consent screen:
 - Check Chat API is enabled
 - Ensure proper OAuth scopes are granted
 
+### Approval notifications not received
+
+**IMPORTANT LIMITATION:** Google Chat bots using service account authentication **cannot proactively send DM messages** to users. This is a Google Chat API restriction.
+
+**What this means:**
+- ❌ The bot cannot send approval cards automatically when requests are created
+- ✅ The bot CAN respond to commands like `pending`, `help`, `status`
+- ✅ Users will receive **email notifications** for approvals
+- ✅ Users can check pending approvals by messaging the bot with `pending`
+
+**Recommended workflow:**
+1. Employee creates time-off request
+2. Manager receives **email notification**
+3. Manager can either:
+   - Approve via web portal
+   - Message the bot with `pending` to see all pending approvals
+   - Click email link to go directly to the request
+
+If you still want to troubleshoot Chat functionality:
+
+1. **Check if Chat notifications are enabled:**
+   ```bash
+   # In .env file
+   ENABLE_CHAT_NOTIFICATIONS=true
+   ```
+
+2. **Verify the bot has been added to a DM with the user:**
+   - Open Google Chat
+   - Search for "Employee Portal Approvals" (or your bot name)
+   - Start a conversation with the bot
+   - Send "help" to verify it responds
+
+3. **Check Application Default Credentials:**
+   The bot uses ADC (Application Default Credentials) to send messages, not user OAuth credentials.
+
+   For Cloud Run (production):
+   - The service account is automatically used
+   - No additional configuration needed
+
+   For local development:
+   - Install gcloud CLI
+   - Run: `gcloud auth application-default login`
+   - This creates local ADC credentials
+
+4. **Test the notification system:**
+   ```bash
+   python3 test_chat_notification.py
+   ```
+   Enter your email when prompted to test if messages are delivered.
+
+5. **Check Cloud Run logs:**
+   ```bash
+   gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=employee-portal" --limit 50 --format=json
+   ```
+   Look for errors like:
+   - "Failed to send approval card"
+   - "Could not find existing DM space"
+   - "Failed to create DM space"
+
+6. **Verify the bot can create DM spaces:**
+   The bot must have the `chat.bot` scope to create DM spaces and send messages.
+   This is configured automatically when using Application Default Credentials.
+
 ## Next Steps
 
 1. ✅ Implement Google Chat API client in NotificationService

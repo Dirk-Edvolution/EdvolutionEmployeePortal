@@ -58,10 +58,64 @@ class NotificationService:
 
         raise last_error
 
-    def _get_chat_service(self):
-        """Lazy load Google Chat service"""
+    def _get_chat_service(self, impersonate_user=None):
+        """
+        Lazy load Google Chat service using Application Default Credentials for bot operations
+
+        Args:
+            impersonate_user: Optional user email to impersonate using domain-wide delegation
+
+        Returns:
+            Google Chat API service
+        """
+        # If impersonating a user, create a new delegated credential
+        if impersonate_user:
+            try:
+                from google.auth import default
+                from google.auth.transport.requests import Request
+
+                # Get default credentials (service account)
+                credentials, project = default(scopes=[
+                    'https://www.googleapis.com/auth/chat.messages',
+                    'https://www.googleapis.com/auth/chat.spaces'
+                ])
+
+                # Check if credentials support delegation
+                if hasattr(credentials, 'with_subject'):
+                    # Create delegated credentials to act as the user
+                    delegated_credentials = credentials.with_subject(impersonate_user)
+
+                    if not delegated_credentials.valid:
+                        delegated_credentials.refresh(Request())
+
+                    chat_service = build('chat', 'v1', credentials=delegated_credentials)
+                    logger.info(f"Initialized Chat service with domain-wide delegation as {impersonate_user}")
+                    return chat_service
+                else:
+                    logger.warning(f"Credentials do not support domain-wide delegation for {impersonate_user}")
+            except Exception as e:
+                logger.error(f"Failed to create delegated credentials for {impersonate_user}: {e}")
+
+        # Standard bot service (for webhook responses)
         if not self.chat_service:
-            self.chat_service = build('chat', 'v1', credentials=self.credentials)
+            from google.auth import default
+            from google.auth.transport.requests import Request
+
+            try:
+                # Use ADC with chat.bot scope for bot operations
+                credentials, project = default(scopes=['https://www.googleapis.com/auth/chat.bot'])
+
+                # Refresh credentials if needed
+                if not credentials.valid:
+                    credentials.refresh(Request())
+
+                self.chat_service = build('chat', 'v1', credentials=credentials)
+                logger.info("Initialized Chat service with Application Default Credentials (bot scope)")
+            except Exception as e:
+                logger.warning(f"Could not initialize Chat service with ADC, falling back to user credentials: {e}")
+                # Fallback to user credentials if ADC not available (local development)
+                self.chat_service = build('chat', 'v1', credentials=self.credentials)
+
         return self.chat_service
 
     def _get_gmail_service(self):
@@ -109,38 +163,22 @@ class NotificationService:
         """
         Send a direct message to a user via Google Chat
 
+        NOTE: Google Chat bots with service account auth cannot proactively
+        create DM spaces. This method will always return False.
+        Use email notifications or have users message the bot instead.
+
         Args:
             user_email: The user's email address
             message_text: The message to send
 
         Returns:
-            True if successful, False otherwise
+            Always False (Chat bots cannot create DM spaces proactively)
         """
-        try:
-            chat = self._get_chat_service()
-
-            # Create a DM space with the user
-            space = chat.spaces().create(body={
-                'type': 'DIRECT_MESSAGE',
-                'singleUserBotDm': False,
-                'displayName': f'DM with {user_email}'
-            }).execute()
-
-            # Send the message
-            message = {
-                'text': message_text
-            }
-
-            response = chat.spaces().messages().create(
-                parent=space['name'],
-                body=message
-            ).execute()
-
-            logger.info(f"Direct message sent to {user_email}: {response.get('name')}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send direct message to {user_email}: {str(e)}")
-            return False
+        logger.info(
+            f"Skipping Chat DM to {user_email}. "
+            "Service account bots cannot create DM spaces. Use email instead."
+        )
+        return False
 
     def send_approval_chat_card(
         self,
@@ -256,24 +294,30 @@ class NotificationService:
                 }]
             })
 
-            # Create a DM space with the user
-            space = chat.spaces().create(body={
-                'type': 'DIRECT_MESSAGE',
-                'singleUserBotDm': False,
-                'displayName': f'DM with {user_email}'
-            }).execute()
+            # IMPORTANT: Google Chat bots with service account auth cannot proactively
+            # create DM spaces or find users by email. This is a Chat API limitation.
+            # Bots can only send messages to spaces where they've been added.
+            #
+            # Solution: We cannot send proactive approval cards via Chat.
+            # Instead, users should:
+            # 1. Check pending approvals via "pending" command in Chat
+            # 2. Receive email notifications
+            # 3. Use the web portal
+            #
+            # We'll log this limitation and fall back to email notification.
 
-            # Send the card message
-            response = chat.spaces().messages().create(
-                parent=space['name'],
-                body=card_message
-            ).execute()
+            logger.warning(
+                f"Cannot send proactive Chat notification to {user_email}. "
+                "Google Chat bots with service accounts cannot create DM spaces. "
+                "User will receive email notification instead. "
+                "For Chat notifications, users should message the bot with 'pending' command."
+            )
 
-            logger.info(f"Approval card sent to {user_email}: {response.get('name')}")
-            return True
+            # Skip Chat notification - will fall back to email in the calling code
+            return False
 
         except Exception as e:
-            logger.error(f"Failed to send approval card to {user_email}: {str(e)}")
+            logger.error(f"Failed to send approval card to {user_email}: {str(e)}", exc_info=True)
             # Fall back to simple text message
             try:
                 simple_message = f"""🔔 **Time-Off Approval Required**

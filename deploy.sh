@@ -30,7 +30,6 @@ gcloud config set project $PROJECT_ID
 echo "🔨 Building container image..."
 IMAGE_URL="us-central1-docker.pkg.dev/$PROJECT_ID/my-repo/$SERVICE_NAME"
 gcloud builds submit --tag $IMAGE_URL \
-  --no-cache \
   --service-account="projects/${PROJECT_ID}/serviceAccounts/github-actions-deployer@${PROJECT_ID}.iam.gserviceaccount.com" \
   --gcs-source-staging-dir="gs://${PROJECT_ID}-staging/source" \
   --gcs-log-dir="gs://${PROJECT_ID}-staging/logs"
@@ -59,16 +58,7 @@ gcloud run deploy $SERVICE_NAME \
   --cpu 1 \
   --timeout 300 \
   --max-instances 10 \
-  --set-env-vars GCP_PROJECT_ID=$PROJECT_ID \
-  --set-env-vars GCP_LOCATION=$REGION \
-  --set-env-vars GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} \
-  --set-env-vars GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} \
-  --set-env-vars GOOGLE_REDIRECT_URI=https://${SERVICE_NAME}-5n2ivebvra-uc.a.run.app/auth/callback \
-  --set-env-vars FLASK_SECRET_KEY=a728c9a60328bdcd7036910d5f1850c38724dfea9fa50034a07806a9b68112ef \
-  --set-env-vars FLASK_ENV=$ENVIRONMENT \
-  --set-env-vars WORKSPACE_DOMAIN=${WORKSPACE_DOMAIN} \
-  --set-env-vars WORKSPACE_ADMIN_EMAIL=${ADMIN_USERS} \
-  --set-env-vars ADMIN_USERS=${ADMIN_USERS}
+  --set-env-vars "^@^GCP_PROJECT_ID=${PROJECT_ID}@GCP_LOCATION=${REGION}@GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}@GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}@GOOGLE_REDIRECT_URI=https://${SERVICE_NAME}-5n2ivebvra-uc.a.run.app/auth/callback@FLASK_SECRET_KEY=a728c9a60328bdcd7036910d5f1850c38724dfea9fa50034a07806a9b68112ef@FLASK_ENV=${ENVIRONMENT}@WORKSPACE_DOMAIN=${WORKSPACE_DOMAIN}@WORKSPACE_ADMIN_EMAIL=${WORKSPACE_ADMIN_EMAIL}@ADMIN_USERS=${ADMIN_USERS}"
 
 # Get the service URL
 SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)')

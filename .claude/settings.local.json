@@ -35,7 +35,16 @@
       "Bash(gcloud run services describe:*)",
       "Bash(gcloud builds list:*)",
       "Bash(chmod:*)",
-      "Bash(gcloud logging read:*)"
+      "Bash(gcloud logging read:*)",
+      "Bash(./deploy.sh:*)",
+      "Bash(echo:*)",
+      "Bash(gcloud run services update:*)",
+      "Bash(gcloud logging tail:*)",
+      "Bash(gcloud builds submit:*)",
+      "Bash(tee:*)",
+      "Bash(gcloud run deploy:*)",
+      "Bash(tr:*)",
+      "Bash(gcloud iam service-accounts describe:*)"
     ],
     "deny": [],
     "ask": []

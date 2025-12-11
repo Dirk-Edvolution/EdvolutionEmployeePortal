@@ -58,11 +58,46 @@ class NotificationService:
 
         raise last_error
 
-    def _get_chat_service(self):
-        """Lazy load Google Chat service using Application Default Credentials for bot operations"""
+    def _get_chat_service(self, impersonate_user=None):
+        """
+        Lazy load Google Chat service using Application Default Credentials for bot operations
+
+        Args:
+            impersonate_user: Optional user email to impersonate using domain-wide delegation
+
+        Returns:
+            Google Chat API service
+        """
+        # If impersonating a user, create a new delegated credential
+        if impersonate_user:
+            try:
+                from google.auth import default
+                from google.auth.transport.requests import Request
+
+                # Get default credentials (service account)
+                credentials, project = default(scopes=[
+                    'https://www.googleapis.com/auth/chat.messages',
+                    'https://www.googleapis.com/auth/chat.spaces'
+                ])
+
+                # Check if credentials support delegation
+                if hasattr(credentials, 'with_subject'):
+                    # Create delegated credentials to act as the user
+                    delegated_credentials = credentials.with_subject(impersonate_user)
+
+                    if not delegated_credentials.valid:
+                        delegated_credentials.refresh(Request())
+
+                    chat_service = build('chat', 'v1', credentials=delegated_credentials)
+                    logger.info(f"Initialized Chat service with domain-wide delegation as {impersonate_user}")
+                    return chat_service
+                else:
+                    logger.warning(f"Credentials do not support domain-wide delegation for {impersonate_user}")
+            except Exception as e:
+                logger.error(f"Failed to create delegated credentials for {impersonate_user}: {e}")
+
+        # Standard bot service (for webhook responses)
         if not self.chat_service:
-            # Use Application Default Credentials for Chat Bot API
-            # This allows the bot to send messages on behalf of the app
             from google.auth import default
             from google.auth.transport.requests import Request
 

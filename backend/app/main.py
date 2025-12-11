@@ -23,7 +23,8 @@ def create_app():
         'http://localhost:3000',
         'http://localhost:8080',
         'https://*.run.app',
-        'https://employee-portal-5n2ivebvra-uc.a.run.app'
+        'https://employee-portal-5n2ivebvra-uc.a.run.app',
+        'https://rrhh.edvolution.io'
     ])
 
     # Register blueprints

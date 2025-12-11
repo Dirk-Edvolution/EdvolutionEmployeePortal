@@ -5,28 +5,25 @@ from flask import Blueprint, jsonify, request
 from backend.app.services import FirestoreService, ChatAIService
 from backend.app.models import ApprovalStatus
 from backend.config.settings import ADMIN_USERS
-from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 
 # Initialize Google Chat API client
 def get_chat_service():
     """Get authenticated Google Chat API service"""
-    try:
-        credentials = service_account.Credentials.from_service_account_file(
-            os.environ.get('GOOGLE_APPLICATION_CREDENTIALS', '/app/service-account-key.json'),
-            scopes=['https://www.googleapis.com/auth/chat.bot']
-        )
-        return build('chat', 'v1', credentials=credentials)
-    except Exception as e:
-        logger.error(f"Failed to initialize Chat API: {e}")
-        # Fall back to application default credentials
-        from google.auth import default
-        credentials, _ = default(scopes=['https://www.googleapis.com/auth/chat.bot'])
-        return build('chat', 'v1', credentials=credentials)
+    from google.auth import default
+    from google.auth.transport.requests import Request
+
+    # Use Application Default Credentials (ADC) in Cloud Run
+    credentials, project = default(scopes=['https://www.googleapis.com/auth/chat.bot'])
+
+    # Refresh credentials if needed
+    if not credentials.valid:
+        credentials.refresh(Request())
+
+    return build('chat', 'v1', credentials=credentials)
 
 chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
 

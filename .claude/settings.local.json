@@ -55,7 +55,9 @@
       "Bash(kill:*)",
       "Bash(find:*)",
       "Bash(gcloud secrets create:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(gcloud run revisions describe:*)",
+      "Bash(gcloud run revisions list:*)"
     ],
     "deny": [],
     "ask": []

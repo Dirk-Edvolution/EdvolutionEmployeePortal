@@ -17,7 +17,8 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 def login():
     """Initiate OAuth flow"""
     # Build redirect URI dynamically from request
-    redirect_uri = url_for('auth.callback', _external=True)
+    # Force HTTPS in production (url_for returns HTTP behind load balancer)
+    redirect_uri = url_for('auth.callback', _external=True, _scheme='https')
 
     flow = create_oauth_flow(redirect_uri=redirect_uri)
     authorization_url, state = flow.authorization_url(

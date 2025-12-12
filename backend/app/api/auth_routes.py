@@ -18,7 +18,9 @@ def login():
     """Initiate OAuth flow"""
     # Build redirect URI dynamically from request
     # Force HTTPS in production (url_for returns HTTP behind load balancer)
-    redirect_uri = url_for('auth.callback', _external=True, _scheme='https')
+    # But keep HTTP for localhost
+    scheme = 'https' if request.host not in ['localhost:8080', '127.0.0.1:8080'] else 'http'
+    redirect_uri = url_for('auth.callback', _external=True, _scheme=scheme)
 
     flow = create_oauth_flow(redirect_uri=redirect_uri)
     authorization_url, state = flow.authorization_url(

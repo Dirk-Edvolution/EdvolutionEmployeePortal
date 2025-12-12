@@ -46,7 +46,15 @@
       "Bash(tr:*)",
       "Bash(gcloud iam service-accounts describe:*)",
       "Bash(git rebase:*)",
-      "Bash(gcloud config set:*)"
+      "Bash(gcloud config set:*)",
+      "Bash(gcloud auth application-default print-access-token:*)",
+      "Bash(gcloud iap oauth-brands:*)",
+      "Bash(gcloud alpha iap oauth-clients list:*)",
+      "Bash(gcloud projects describe:*)",
+      "Bash(\"https://oauth2.googleapis.com/v2/oauth/clients/844588465159-efl1052su0j90nf6i9drdshhns0gp434.apps.googleusercontent.com\")",
+      "Bash(kill:*)",
+      "Bash(find:*)",
+      "Bash(gcloud secrets create:*)"
     ],
     "deny": [],
     "ask": []

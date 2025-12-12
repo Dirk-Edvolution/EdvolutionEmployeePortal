@@ -28,12 +28,11 @@ def create_oauth_flow():
                 "client_secret": GOOGLE_CLIENT_SECRET,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [GOOGLE_REDIRECT_URI],
             }
         },
         scopes=OAUTH_SCOPES,
+        redirect_uri=GOOGLE_REDIRECT_URI
     )
-    flow.redirect_uri = GOOGLE_REDIRECT_URI
     return flow
 
 

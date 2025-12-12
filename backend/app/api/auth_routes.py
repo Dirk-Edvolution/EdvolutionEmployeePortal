@@ -92,47 +92,6 @@ def logout():
     return redirect('/')
 
 
-@auth_bp.route('/download-credentials')
-def download_credentials():
-    """
-    TEMPORARY ADMIN ENDPOINT: Download current session credentials as JSON
-
-    This endpoint allows admins to download OAuth credentials for the notification account.
-    Use this to extract hola@edvolution.io credentials and store them in Secret Manager.
-
-    **IMPORTANT**: Remove this endpoint after setup is complete for security!
-    """
-    from backend.config.settings import ADMIN_USERS
-
-    # Check if user is logged in
-    user_email = session.get('user_email')
-    if not user_email:
-        return jsonify({'error': 'Not authenticated'}), 401
-
-    # Check if user is an admin
-    if user_email not in ADMIN_USERS:
-        return jsonify({'error': 'Admin access required'}), 403
-
-    # Get credentials from session
-    credentials_dict = session.get('credentials')
-    if not credentials_dict:
-        return jsonify({'error': 'No credentials in session'}), 400
-
-    # Return credentials as downloadable JSON
-    from flask import Response
-    import json
-
-    response = Response(
-        json.dumps(credentials_dict, indent=2),
-        mimetype='application/json',
-        headers={
-            'Content-Disposition': f'attachment; filename=credentials-{user_email}.json'
-        }
-    )
-
-    return response
-
-
 @auth_bp.route('/profile-setup')
 def profile_setup():
     """Handle first-time user setup"""

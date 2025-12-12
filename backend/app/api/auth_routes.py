@@ -9,6 +9,7 @@ from backend.app.utils.auth import (
     get_credentials_from_session,
 )
 from backend.app.services import FirestoreService
+from backend.config.settings import FLASK_ENV
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -17,10 +18,15 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 def login():
     """Initiate OAuth flow"""
     # Build redirect URI dynamically from request
-    # Force HTTPS in production (url_for returns HTTP behind load balancer)
-    # But keep HTTP for localhost
-    scheme = 'https' if request.host not in ['localhost:8080', '127.0.0.1:8080'] else 'http'
-    redirect_uri = url_for('auth.callback', _external=True, _scheme=scheme)
+    # ProxyFix middleware should handle HTTPS detection behind load balancer,
+    # but we also check hostname as a fallback for local development
+    is_localhost = request.host in ['localhost:8080', '127.0.0.1:8080', 'localhost', '127.0.0.1']
+
+    if is_localhost or FLASK_ENV == 'development':
+        redirect_uri = url_for('auth.callback', _external=True, _scheme='http')
+    else:
+        # In production, use HTTPS explicitly to ensure correct redirect URI
+        redirect_uri = url_for('auth.callback', _external=True, _scheme='https')
 
     flow = create_oauth_flow(redirect_uri=redirect_uri)
     authorization_url, state = flow.authorization_url(

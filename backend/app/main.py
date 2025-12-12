@@ -3,6 +3,7 @@ Main Flask application for Employee Portal
 """
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 from backend.config.settings import FLASK_SECRET_KEY, FLASK_ENV
 from backend.app.api import auth_bp, employee_bp, timeoff_bp, audit_bp, chat_bp
 import os
@@ -11,6 +12,14 @@ import os
 def create_app():
     """Create and configure Flask application"""
     app = Flask(__name__, static_folder='../../frontend/dist')
+
+    # Configure proxy fix for Cloud Run load balancer
+    # This makes Flask correctly detect HTTPS when behind a reverse proxy
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_proto=1,  # Trust X-Forwarded-Proto header for scheme (http/https)
+        x_host=1    # Trust X-Forwarded-Host header for hostname
+    )
 
     # Configuration
     app.secret_key = FLASK_SECRET_KEY

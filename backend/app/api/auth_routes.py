@@ -16,7 +16,10 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 @auth_bp.route('/login')
 def login():
     """Initiate OAuth flow"""
-    flow = create_oauth_flow()
+    # Build redirect URI dynamically from request
+    redirect_uri = url_for('auth.callback', _external=True)
+
+    flow = create_oauth_flow(redirect_uri=redirect_uri)
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
@@ -24,6 +27,7 @@ def login():
     )
 
     session['state'] = state
+    session['redirect_uri'] = redirect_uri  # Store for callback
     return redirect(authorization_url)
 
 
@@ -31,12 +35,13 @@ def login():
 def callback():
     """OAuth callback handler"""
     state = session.get('state')
-
-    flow = create_oauth_flow()
-    flow.fetch_token(authorization_response=request.url)
+    redirect_uri = session.get('redirect_uri')
 
     if not state or state != request.args.get('state'):
         return jsonify({'error': 'Invalid state parameter'}), 400
+
+    flow = create_oauth_flow(redirect_uri=redirect_uri)
+    flow.fetch_token(authorization_response=request.url)
 
     credentials = flow.credentials
     session['credentials'] = credentials_to_dict(credentials)

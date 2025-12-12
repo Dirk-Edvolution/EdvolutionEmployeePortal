@@ -54,7 +54,8 @@
       "Bash(\"https://oauth2.googleapis.com/v2/oauth/clients/844588465159-efl1052su0j90nf6i9drdshhns0gp434.apps.googleusercontent.com\")",
       "Bash(kill:*)",
       "Bash(find:*)",
-      "Bash(gcloud secrets create:*)"
+      "Bash(gcloud secrets create:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

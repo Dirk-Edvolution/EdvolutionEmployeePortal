@@ -19,8 +19,11 @@ import os
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 
-def create_oauth_flow():
+def create_oauth_flow(redirect_uri=None):
     """Create OAuth flow for Google authentication"""
+    if redirect_uri is None:
+        redirect_uri = GOOGLE_REDIRECT_URI
+
     flow = Flow.from_client_config(
         {
             "web": {
@@ -31,7 +34,7 @@ def create_oauth_flow():
             }
         },
         scopes=OAUTH_SCOPES,
-        redirect_uri=GOOGLE_REDIRECT_URI
+        redirect_uri=redirect_uri
     )
     return flow
 

@@ -659,7 +659,8 @@ Request Details:
             text_body += f"- Notes: {notes}\n"
 
         text_body += """
-Please log in to the Employee Portal to review and approve/reject this request.
+Please log in to the Employee Portal to review and approve/reject this request:
+https://rrhh.edvolution.io
 
 This is an automated reminder. You will receive daily notifications until the request is processed.
 
@@ -691,7 +692,7 @@ Employee Portal System
         </ul>
     </div>
 
-    <p>Please log in to the <strong>Employee Portal</strong> to review and approve/reject this request.</p>
+    <p>Please log in to the <a href="https://rrhh.edvolution.io" style="color: #667eea; text-decoration: none; font-weight: bold;">Employee Portal</a> to review and approve/reject this request.</p>
 
     <p style="color: #666; font-size: 12px; margin-top: 30px;">
         This is an automated reminder. You will receive daily notifications until the request is processed.
@@ -716,7 +717,7 @@ Employee Portal System
         if notes:
             chat_message += f"**Notes:** {notes}\n"
 
-        chat_message += f"\nPlease log in to the Employee Portal to review this {level_label} approval request."
+        chat_message += f"\nPlease log in to the Employee Portal to review this {level_label} approval request:\nhttps://rrhh.edvolution.io"
 
         # Send email notification
         email_success = self.send_email(
@@ -833,7 +834,7 @@ Request Details:
             text_body += f"\nReason: {rejection_reason}\n"
 
         if status == 'approved':
-            text_body += "\nYour time off has been approved. Please sync it to your calendar from the Employee Portal.\n"
+            text_body += "\nYour time off has been approved. Please sync it to your calendar from the Employee Portal:\nhttps://rrhh.edvolution.io\n"
         elif status == 'manager_approved':
             text_body += "\nYour manager has approved this request. It now requires HR/Admin approval.\n"
 

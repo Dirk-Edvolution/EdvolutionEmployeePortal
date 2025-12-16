@@ -110,6 +110,51 @@ class NotificationService:
 
         raise last_error
 
+    def _load_service_account_credentials(self, scopes: list, impersonate_email: str):
+        """
+        Helper method to load service account credentials with domain-wide delegation from Secret Manager
+
+        Args:
+            scopes: List of OAuth scopes needed
+            impersonate_email: Email address to impersonate (e.g., hola@edvolution.io)
+
+        Returns:
+            Delegated credentials or None if not available
+        """
+        try:
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request
+            from google.cloud import secretmanager
+            from backend.config.settings import GCP_PROJECT_ID
+            import json
+
+            client = secretmanager.SecretManagerServiceClient()
+            secret_name = f"projects/{GCP_PROJECT_ID}/secrets/service-account-key/versions/latest"
+
+            logger.info(f"Loading service account key from Secret Manager for {impersonate_email}")
+            response = client.access_secret_version(request={"name": secret_name})
+            sa_key_json = response.payload.data.decode('UTF-8')
+            sa_info = json.loads(sa_key_json)
+
+            # Create service account credentials from the key
+            credentials = service_account.Credentials.from_service_account_info(
+                sa_info,
+                scopes=scopes
+            )
+
+            # Create delegated credentials to impersonate the notification account
+            delegated_credentials = credentials.with_subject(impersonate_email)
+
+            if not delegated_credentials.valid:
+                delegated_credentials.refresh(Request())
+
+            logger.info(f"Successfully created delegated credentials for {impersonate_email}")
+            return delegated_credentials
+
+        except Exception as e:
+            logger.error(f"Failed to load service account credentials: {e}", exc_info=True)
+            return None
+
     def _get_chat_service(self, impersonate_user=None):
         """
         Lazy load Google Chat service using Application Default Credentials for bot operations
@@ -178,34 +223,27 @@ class NotificationService:
         """
         if not self.gmail_service:
             try:
-                from google.auth import default
-                from google.auth.transport.requests import Request
                 import os
 
                 # Get the email to impersonate (default: hola@edvolution.io)
                 impersonate_email = os.getenv('NOTIFICATION_ACCOUNT_EMAIL', 'hola@edvolution.io')
 
-                # Use Application Default Credentials (service account in production)
-                credentials, project = default()
+                # Define required scopes
+                scopes = [
+                    'https://www.googleapis.com/auth/gmail.send',
+                    'https://www.googleapis.com/auth/gmail.settings.basic',
+                    'https://www.googleapis.com/auth/gmail.settings.sharing'
+                ]
 
-                # Check if credentials support delegation (service account)
-                if hasattr(credentials, 'with_subject'):
-                    # Create delegated credentials to act as the notification account
-                    scopes = [
-                        'https://www.googleapis.com/auth/gmail.send',
-                        'https://www.googleapis.com/auth/gmail.settings.basic',
-                        'https://www.googleapis.com/auth/gmail.settings.sharing'
-                    ]
-                    delegated_credentials = credentials.with_subject(impersonate_email).with_scopes(scopes)
+                # Try to load service account credentials with delegation
+                delegated_credentials = self._load_service_account_credentials(scopes, impersonate_email)
 
-                    if not delegated_credentials.valid:
-                        delegated_credentials.refresh(Request())
-
+                if delegated_credentials:
                     self.gmail_service = build('gmail', 'v1', credentials=delegated_credentials)
                     logger.info(f"Gmail service initialized with service account delegation as {impersonate_email}")
                 else:
                     # Fallback to user credentials for local development
-                    logger.warning("Service account delegation not available, using user credentials for Gmail")
+                    logger.warning("Using user credentials for Gmail (local development mode)")
                     self.gmail_service = build('gmail', 'v1', credentials=self.credentials)
 
             except Exception as e:
@@ -265,32 +303,23 @@ class NotificationService:
             True if successful, False otherwise
         """
         try:
-            # Use service account with domain-wide delegation to impersonate notification account
-            from google.oauth2 import service_account
-            from google.auth.transport.requests import Request
             import os
 
             # Determine which account to impersonate (default to hola@edvolution.io)
             impersonate_email = impersonate_admin or os.getenv('NOTIFICATION_ACCOUNT_EMAIL', 'hola@edvolution.io')
 
-            # Use Application Default Credentials (service account in production)
-            from google.auth import default
-            credentials, project = default()
-
-            # Check if credentials support delegation (service account)
-            if not hasattr(credentials, 'with_subject'):
-                logger.error("Credentials do not support domain-wide delegation. Ensure service account is used.")
-                return False
-
-            # Create delegated credentials to act as the notification account
+            # Define required scopes
             scopes = [
                 'https://www.googleapis.com/auth/chat.messages',
                 'https://www.googleapis.com/auth/chat.spaces'
             ]
-            delegated_credentials = credentials.with_subject(impersonate_email).with_scopes(scopes)
 
-            if not delegated_credentials.valid:
-                delegated_credentials.refresh(Request())
+            # Load service account credentials with delegation
+            delegated_credentials = self._load_service_account_credentials(scopes, impersonate_email)
+
+            if not delegated_credentials:
+                logger.error("Could not load service account credentials for Chat")
+                return False
 
             # Build Chat service with delegated credentials
             chat = build('chat', 'v1', credentials=delegated_credentials)
@@ -374,31 +403,23 @@ class NotificationService:
             return True
 
         try:
-            # Use service account with domain-wide delegation to impersonate notification account
-            from google.auth import default
-            from google.auth.transport.requests import Request
             import os
 
             # Determine which account to impersonate (default to hola@edvolution.io)
             impersonate_email = impersonate_admin or os.getenv('NOTIFICATION_ACCOUNT_EMAIL', 'hola@edvolution.io')
 
-            # Use Application Default Credentials (service account in production)
-            credentials, project = default()
-
-            # Check if credentials support delegation (service account)
-            if not hasattr(credentials, 'with_subject'):
-                logger.error("Credentials do not support domain-wide delegation. Ensure service account is used.")
-                return False
-
-            # Create delegated credentials to act as the notification account
+            # Define required scopes
             scopes = [
                 'https://www.googleapis.com/auth/chat.messages',
                 'https://www.googleapis.com/auth/chat.spaces'
             ]
-            delegated_credentials = credentials.with_subject(impersonate_email).with_scopes(scopes)
 
-            if not delegated_credentials.valid:
-                delegated_credentials.refresh(Request())
+            # Load service account credentials with delegation
+            delegated_credentials = self._load_service_account_credentials(scopes, impersonate_email)
+
+            if not delegated_credentials:
+                logger.error("Could not load service account credentials for Chat card")
+                return False
 
             # Build Chat service with delegated credentials
             chat = build('chat', 'v1', credentials=delegated_credentials)

@@ -17,18 +17,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 @auth_bp.route('/login')
 def login():
     """Initiate OAuth flow"""
-    # Build redirect URI dynamically from request
-    # ProxyFix middleware should handle HTTPS detection behind load balancer,
-    # but we also check hostname as a fallback for local development
-    is_localhost = request.host in ['localhost:8080', '127.0.0.1:8080', 'localhost', '127.0.0.1']
-
-    if is_localhost or FLASK_ENV == 'development':
-        redirect_uri = url_for('auth.callback', _external=True, _scheme='http')
-    else:
-        # In production, use HTTPS explicitly to ensure correct redirect URI
-        redirect_uri = url_for('auth.callback', _external=True, _scheme='https')
-
-    flow = create_oauth_flow(redirect_uri=redirect_uri)
+    flow = create_oauth_flow()
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
@@ -36,7 +25,6 @@ def login():
     )
 
     session['state'] = state
-    session['redirect_uri'] = redirect_uri  # Store for callback
     return redirect(authorization_url)
 
 
@@ -44,12 +32,11 @@ def login():
 def callback():
     """OAuth callback handler"""
     state = session.get('state')
-    redirect_uri = session.get('redirect_uri')
 
     if not state or state != request.args.get('state'):
         return jsonify({'error': 'Invalid state parameter'}), 400
 
-    flow = create_oauth_flow(redirect_uri=redirect_uri)
+    flow = create_oauth_flow()
     flow.fetch_token(authorization_response=request.url)
 
     credentials = flow.credentials

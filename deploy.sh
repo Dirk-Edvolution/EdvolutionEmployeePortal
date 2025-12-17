@@ -62,7 +62,7 @@ gcloud run deploy $SERVICE_NAME \
   --set-env-vars "GCP_LOCATION=${REGION}" \
   --set-env-vars "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" \
   --set-env-vars "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" \
-  --set-env-vars "GOOGLE_REDIRECT_URI=https://${SERVICE_NAME}-5n2ivebvra-uc.a.run.app/auth/callback" \
+  --set-env-vars "GOOGLE_REDIRECT_URI=${REDIRECT_URI}" \
   --set-env-vars "FLASK_SECRET_KEY=a728c9a60328bdcd7036910d5f1850c38724dfea9fa50034a07806a9b68112ef" \
   --set-env-vars "FLASK_ENV=${ENVIRONMENT}" \
   --set-env-vars "WORKSPACE_DOMAIN=${WORKSPACE_DOMAIN}" \

@@ -23,6 +23,7 @@ class Employee:
         location: Optional[str] = None,
         country: Optional[str] = None,
         region: Optional[str] = None,
+        holiday_region: Optional[str] = None,  # Regional holiday calendar for time-off calculations
         vacation_days_per_year: int = 20,
         is_admin: bool = False,
         is_active: bool = True,
@@ -66,6 +67,7 @@ class Employee:
         self.location = location
         self.country = country
         self.region = region
+        self.holiday_region = holiday_region
         self.vacation_days_per_year = vacation_days_per_year
         self.is_admin = is_admin
         self.is_active = is_active
@@ -117,6 +119,7 @@ class Employee:
             'location': self.location,
             'country': self.country,
             'region': self.region,
+            'holiday_region': self.holiday_region,
             'vacation_days_per_year': self.vacation_days_per_year,
             'is_admin': self.is_admin,
             'is_active': self.is_active,

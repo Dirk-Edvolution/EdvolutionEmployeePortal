@@ -73,8 +73,29 @@ class TimeOffRequest:
 
     @property
     def days_count(self) -> int:
-        """Calculate number of days in the request"""
+        """
+        Calculate number of days in the request (calendar days)
+        For working days count, use get_working_days_count()
+        """
         return (self.end_date - self.start_date).days + 1
+
+    def get_working_days_count(self, holiday_region: Optional[str] = None) -> int:
+        """
+        Calculate number of working days in the request
+        Excludes weekends (Sat/Sun) and regional public holidays
+
+        Args:
+            holiday_region: Regional holiday calendar code
+
+        Returns:
+            Number of working days
+        """
+        from backend.app.services.holiday_service import HolidayService
+        return HolidayService.count_working_days(
+            self.start_date,
+            self.end_date,
+            holiday_region
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for Firestore"""

@@ -4,7 +4,7 @@ Employee management API routes
 from flask import Blueprint, jsonify, request
 from datetime import datetime
 from backend.app.utils.auth import login_required, admin_required, get_current_user_email, is_admin
-from backend.app.services import FirestoreService, WorkspaceService
+from backend.app.services import FirestoreService, WorkspaceService, HolidayService
 from backend.app.utils import get_credentials_from_session
 
 employee_bp = Blueprint('employees', __name__, url_prefix='/api/employees')
@@ -42,7 +42,7 @@ def update_current_employee():
     data = request.json
 
     # Allow employees to update certain fields
-    updatable_fields = ['vacation_days_per_year', 'location', 'country', 'region']
+    updatable_fields = ['vacation_days_per_year', 'location', 'country', 'region', 'holiday_region']
 
     # Only admins can update these fields
     admin_fields = ['manager_email', 'department', 'job_title', 'is_admin']
@@ -319,3 +319,38 @@ def add_evaluation(email):
     db.update_employee(employee)
 
     return jsonify({'success': True, 'evaluation': evaluation}), 201
+
+
+@employee_bp.route('/holiday-regions', methods=['GET'])
+def get_holiday_regions():
+    """Get list of available holiday regions for time-off calculations"""
+    regions = HolidayService.get_available_regions()
+    return jsonify({'regions': regions}), 200
+
+
+@employee_bp.route('/holiday-regions/<region_code>/holidays/<int:year>', methods=['GET'])
+def get_region_holidays(region_code: str, year: int):
+    """
+    Get all holidays for a specific region and year
+
+    Args:
+        region_code: Holiday region code (e.g., 'madrid', 'mexico')
+        year: Year to get holidays for
+    """
+    holidays = HolidayService.get_year_holidays(year, region_code)
+
+    # Convert date objects to ISO format strings
+    holidays_serialized = [
+        {
+            'date': h['date'].isoformat(),
+            'name': h['name'],
+            'is_weekend': h['is_weekend']
+        }
+        for h in holidays
+    ]
+
+    return jsonify({
+        'region': region_code,
+        'year': year,
+        'holidays': holidays_serialized
+    }), 200

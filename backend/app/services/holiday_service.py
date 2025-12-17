@@ -19,15 +19,147 @@ class HolidayService:
     - madrid: Madrid, Spain
     - andalucia: Andalucía, Spain
     - mexico: Mexico (national calendar)
-    - santiago_chile: Santiago, Chile
-    - caracas: Caracas, Venezuela
-    - bogota: Bogotá, Colombia
+    - chile: Chile (national calendar)
+    - colombia: Colombia (national calendar - includes Bogotá)
     """
 
-    # Regional holiday calendars (format: (month, day, name))
-    # Note: These are fixed holidays. For movable holidays (Easter, etc.),
-    # they should be calculated dynamically or added per year
+    # Year-specific holidays (most accurate)
+    # Format: {region: {year: [(date_str, name, note), ...]}}
+    YEAR_SPECIFIC_HOLIDAYS = {
+        'mexico': {
+            2026: [
+                ('2026-01-01', 'Año Nuevo', None),
+                ('2026-02-02', 'Día de la Constitución', 'Feriado puente. El festivo del 5 de febrero se traslada al lunes 2'),
+                ('2026-03-16', 'Natalicio de Benito Juárez', 'Feriado puente. El festivo del 21 de marzo se traslada al lunes 16'),
+                ('2026-05-01', 'Día del Trabajo', 'Feriado puente'),
+                ('2026-09-16', 'Día de la Independencia Mexicana', None),
+                ('2026-11-16', 'Día de la Revolución Mexicana', 'Feriado puente. El festivo del 20 de noviembre se traslada al lunes 16'),
+                ('2026-12-25', 'Navidad', 'Feriado puente'),
+            ]
+        },
+        'madrid': {
+            2026: [
+                ('2026-01-01', 'Año Nuevo', None),
+                ('2026-01-06', 'Epifanía del Señor', None),
+                ('2026-04-02', 'Jueves Santo', None),
+                ('2026-04-03', 'Viernes Santo', None),
+                ('2026-05-01', 'Fiesta del Trabajo', None),
+                ('2026-05-02', 'Fiesta de la Comunidad de Madrid', None),
+                ('2026-08-15', 'Asunción de la Virgen', None),
+                ('2026-10-12', 'Fiesta Nacional de España', None),
+                ('2026-11-02', 'Traslado de Todos los Santos', None),
+                ('2026-12-07', 'Traslado del Día de la Constitución Española', None),
+                ('2026-12-08', 'Día de la Inmaculada Concepción', None),
+                ('2026-12-25', 'Natividad del Señor', None),
+            ]
+        },
+        'andalucia': {
+            2026: [
+                ('2026-01-01', 'Año Nuevo', None),
+                ('2026-01-06', 'Epifanía del Señor', None),
+                ('2026-02-28', 'Día de Andalucía', None),
+                ('2026-04-02', 'Jueves Santo', None),
+                ('2026-04-03', 'Viernes Santo', None),
+                ('2026-04-22', 'Miércoles de Feria', None),
+                ('2026-05-01', 'Fiesta del Trabajo', None),
+                ('2026-06-04', 'Fiesta del Corpus Cristi', None),
+                ('2026-08-15', 'Asunción de la Virgen', None),
+                ('2026-10-12', 'Fiesta Nacional de España', None),
+                ('2026-11-02', 'Festividad de todos los santos (Traslado)', None),
+                ('2026-12-07', 'Día de la Constitución (Traslado)', None),
+                ('2026-12-08', 'La Inmaculada Concepción', None),
+                ('2026-12-25', 'Natividad del Señor', None),
+            ]
+        },
+        'colombia': {
+            2026: [
+                ('2026-01-01', 'Año Nuevo', None),
+                ('2026-01-12', 'Reyes Magos', None),
+                ('2026-03-23', 'Día de San José', None),
+                ('2026-04-02', 'Jueves Santo', None),
+                ('2026-04-03', 'Viernes Santo', None),
+                ('2026-05-01', 'Día del trabajo', None),
+                ('2026-05-18', 'Ascensión de Jesús', None),
+                ('2026-06-08', 'Corpus Christi', None),
+                ('2026-06-15', 'Sagrado Corazón de Jesús', None),
+                ('2026-06-29', 'San Pedro y San Pablo', None),
+                ('2026-07-20', 'Día de la independencia', None),
+                ('2026-08-07', 'Batalla de Boyacá', None),
+                ('2026-08-17', 'Asunción de la Virgen', None),
+                ('2026-10-12', 'Día de la raza', None),
+                ('2026-11-02', 'Todos los Santos', None),
+                ('2026-11-16', 'Independencia de Cartagena', None),
+                ('2026-12-08', 'Inmaculada Concepción', None),
+                ('2026-12-25', 'Navidad', None),
+            ]
+        },
+        'chile': {
+            2026: [
+                ('2026-01-01', 'Año Nuevo', 'Irrenunciable'),
+                ('2026-04-03', 'Viernes Santo', 'Religioso'),
+                ('2026-04-04', 'Sábado Santo', 'Religioso'),
+                ('2026-05-01', 'Día Nacional del Trabajo', 'Irrenunciable'),
+                ('2026-05-21', 'Día de las Glorias Navales', None),
+                ('2026-06-21', 'Día Nacional de los Pueblos Indígenas', None),
+                ('2026-06-29', 'San Pedro y San Pablo', 'Religioso'),
+                ('2026-07-16', 'Día de la Virgen del Carmen', 'Religioso'),
+                ('2026-08-15', 'Asunción de la Virgen', 'Religioso'),
+                ('2026-09-18', 'Independencia Nacional', 'Irrenunciable'),
+                ('2026-09-19', 'Día de las Glorias del Ejército', 'Irrenunciable'),
+                ('2026-10-12', 'Encuentro de Dos Mundos', None),
+                ('2026-10-31', 'Día de las Iglesias Evangélicas y Protestantes', 'Religioso'),
+                ('2026-11-01', 'Día de Todos los Santos', 'Religioso'),
+                ('2026-12-08', 'Inmaculada Concepción', 'Religioso'),
+                ('2026-12-25', 'Navidad', 'Irrenunciable'),
+            ]
+        },
+        # Aliases for consistency
+        'bogota': {  # Colombia national calendar applies
+            2026: [
+                ('2026-01-01', 'Año Nuevo', None),
+                ('2026-01-12', 'Reyes Magos', None),
+                ('2026-03-23', 'Día de San José', None),
+                ('2026-04-02', 'Jueves Santo', None),
+                ('2026-04-03', 'Viernes Santo', None),
+                ('2026-05-01', 'Día del trabajo', None),
+                ('2026-05-18', 'Ascensión de Jesús', None),
+                ('2026-06-08', 'Corpus Christi', None),
+                ('2026-06-15', 'Sagrado Corazón de Jesús', None),
+                ('2026-06-29', 'San Pedro y San Pablo', None),
+                ('2026-07-20', 'Día de la independencia', None),
+                ('2026-08-07', 'Batalla de Boyacá', None),
+                ('2026-08-17', 'Asunción de la Virgen', None),
+                ('2026-10-12', 'Día de la raza', None),
+                ('2026-11-02', 'Todos los Santos', None),
+                ('2026-11-16', 'Independencia de Cartagena', None),
+                ('2026-12-08', 'Inmaculada Concepción', None),
+                ('2026-12-25', 'Navidad', None),
+            ]
+        },
+        'santiago_chile': {  # Alias for Chile
+            2026: [
+                ('2026-01-01', 'Año Nuevo', 'Irrenunciable'),
+                ('2026-04-03', 'Viernes Santo', 'Religioso'),
+                ('2026-04-04', 'Sábado Santo', 'Religioso'),
+                ('2026-05-01', 'Día Nacional del Trabajo', 'Irrenunciable'),
+                ('2026-05-21', 'Día de las Glorias Navales', None),
+                ('2026-06-21', 'Día Nacional de los Pueblos Indígenas', None),
+                ('2026-06-29', 'San Pedro y San Pablo', 'Religioso'),
+                ('2026-07-16', 'Día de la Virgen del Carmen', 'Religioso'),
+                ('2026-08-15', 'Asunción de la Virgen', 'Religioso'),
+                ('2026-09-18', 'Independencia Nacional', 'Irrenunciable'),
+                ('2026-09-19', 'Día de las Glorias del Ejército', 'Irrenunciable'),
+                ('2026-10-12', 'Encuentro de Dos Mundos', None),
+                ('2026-10-31', 'Día de las Iglesias Evangélicas y Protestantes', 'Religioso'),
+                ('2026-11-01', 'Día de Todos los Santos', 'Religioso'),
+                ('2026-12-08', 'Inmaculada Concepción', 'Religioso'),
+                ('2026-12-25', 'Navidad', 'Irrenunciable'),
+            ]
+        },
+    }
 
+    # Fallback: Regional holiday calendars (format: (month, day, name))
+    # Used for years not in YEAR_SPECIFIC_HOLIDAYS
     REGIONAL_HOLIDAYS = {
         'madrid': [
             # National Spanish holidays
@@ -155,17 +287,29 @@ class HolidayService:
         Returns:
             True if the date is a public holiday
         """
+        # First, check if we have year-specific holiday data
+        if region in cls.YEAR_SPECIFIC_HOLIDAYS:
+            year_data = cls.YEAR_SPECIFIC_HOLIDAYS[region].get(date_obj.year)
+            if year_data:
+                # Check against specific dates for this year
+                date_str = date_obj.isoformat()
+                for holiday_date_str, name, note in year_data:
+                    if holiday_date_str == date_str:
+                        logger.debug(f"Date {date_obj} is holiday: {name} in {region}")
+                        return True
+                # Year data exists but date not found - not a holiday
+                return False
+
+        # Fall back to pattern-based REGIONAL_HOLIDAYS for years without specific data
         if region not in cls.REGIONAL_HOLIDAYS:
             logger.warning(f"Unknown holiday region: {region}, defaulting to no holidays")
             return False
 
-        # Check fixed holidays
+        # Check fixed holidays by month/day pattern
         for month, day, name in cls.REGIONAL_HOLIDAYS[region]:
             if date_obj.month == month and date_obj.day == day:
                 logger.debug(f"Date {date_obj} is holiday: {name} in {region}")
                 return True
-
-        # TODO: Add movable holiday calculation (Easter-based holidays, etc.)
 
         return False
 
@@ -244,22 +388,49 @@ class HolidayService:
         Returns:
             List of holiday dictionaries with date and name
         """
-        if region not in cls.REGIONAL_HOLIDAYS:
-            return []
-
         holidays = []
         current_date = start_date
 
-        while current_date <= end_date:
-            for month, day, name in cls.REGIONAL_HOLIDAYS[region]:
-                if current_date.month == month and current_date.day == day:
-                    holidays.append({
-                        'date': current_date,
-                        'name': name,
-                        'is_weekend': cls.is_weekend(current_date)
-                    })
-            current_date += timedelta(days=1)
+        # Collect all years in the range
+        years = set()
+        temp_date = start_date
+        while temp_date <= end_date:
+            years.add(temp_date.year)
+            temp_date += timedelta(days=365)
 
+        # Check if we have year-specific data for any year in range
+        has_year_specific = region in cls.YEAR_SPECIFIC_HOLIDAYS
+
+        if has_year_specific:
+            # Use year-specific data
+            for year in years:
+                year_data = cls.YEAR_SPECIFIC_HOLIDAYS[region].get(year)
+                if year_data:
+                    for holiday_date_str, name, note in year_data:
+                        holiday_date = date.fromisoformat(holiday_date_str)
+                        if start_date <= holiday_date <= end_date:
+                            holidays.append({
+                                'date': holiday_date,
+                                'name': name,
+                                'note': note,
+                                'is_weekend': cls.is_weekend(holiday_date)
+                            })
+
+        # Fall back to pattern-based if no year-specific data
+        if not has_year_specific and region in cls.REGIONAL_HOLIDAYS:
+            current_date = start_date
+            while current_date <= end_date:
+                for month, day, name in cls.REGIONAL_HOLIDAYS[region]:
+                    if current_date.month == month and current_date.day == day:
+                        holidays.append({
+                            'date': current_date,
+                            'name': name,
+                            'is_weekend': cls.is_weekend(current_date)
+                        })
+                current_date += timedelta(days=1)
+
+        # Sort by date
+        holidays.sort(key=lambda x: x['date'])
         return holidays
 
     @classmethod
@@ -274,10 +445,29 @@ class HolidayService:
         Returns:
             List of holiday dictionaries with date and name
         """
+        holidays = []
+
+        # First, check if we have year-specific data
+        if region in cls.YEAR_SPECIFIC_HOLIDAYS:
+            year_data = cls.YEAR_SPECIFIC_HOLIDAYS[region].get(year)
+            if year_data:
+                # Use year-specific data
+                for holiday_date_str, name, note in year_data:
+                    holiday_date = date.fromisoformat(holiday_date_str)
+                    holidays.append({
+                        'date': holiday_date,
+                        'name': name,
+                        'note': note,
+                        'is_weekend': cls.is_weekend(holiday_date)
+                    })
+                # Sort by date and return
+                holidays.sort(key=lambda x: x['date'])
+                return holidays
+
+        # Fall back to pattern-based REGIONAL_HOLIDAYS
         if region not in cls.REGIONAL_HOLIDAYS:
             return []
 
-        holidays = []
         for month, day, name in cls.REGIONAL_HOLIDAYS[region]:
             try:
                 holiday_date = date(year, month, day)

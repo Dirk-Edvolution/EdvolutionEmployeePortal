@@ -14,12 +14,14 @@ export default function Dashboard({ user, onLogout }) {
   const [editingRequest, setEditingRequest] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDepartment, setFilterDepartment] = useState('')
+  const [holidayRegions, setHolidayRegions] = useState([])
 
   useEffect(() => {
     loadData()
     // Load employees for admins and managers
     // The backend will filter appropriately based on permissions
     loadEmployees()
+    loadHolidayRegions()
   }, [])
 
   async function loadData() {
@@ -130,6 +132,16 @@ export default function Dashboard({ user, onLogout }) {
       setEmployees(allEmployees)
     } catch (error) {
       showMessage('Failed to load employees: ' + error.message, 'error')
+    }
+  }
+
+  async function loadHolidayRegions() {
+    try {
+      const data = await employeeAPI.getHolidayRegions()
+      setHolidayRegions(data.regions || [])
+    } catch (error) {
+      console.error('Failed to load holiday regions:', error)
+      // Don't show error to user, this is optional data
     }
   }
 
@@ -754,6 +766,7 @@ export default function Dashboard({ user, onLogout }) {
                 if ((formData.get('location') || '') !== (orig.location || '')) return true;
                 if ((formData.get('country') || '') !== (orig.country || '')) return true;
                 if ((formData.get('region') || '') !== (orig.region || '')) return true;
+                if ((formData.get('holiday_region') || '') !== (orig.holiday_region || '')) return true;
                 if (String(formData.get('vacation_days_per_year') || '20') !== String(orig.vacation_days_per_year || 20)) return true;
                 if ((formData.get('contract_type') || '') !== (orig.contract_type || '')) return true;
                 if ((formData.get('salary') || '') !== String(orig.salary || '')) return true;
@@ -798,6 +811,7 @@ export default function Dashboard({ user, onLogout }) {
                   location: formData.get('location'),
                   country: formData.get('country'),
                   region: formData.get('region'),
+                  holiday_region: formData.get('holiday_region') || null,
                   vacation_days_per_year: parseInt(formData.get('vacation_days_per_year')) || 20,
                   contract_type: formData.get('contract_type'),
                   contract_start_date: formData.get('contract_start_date') || null,
@@ -944,6 +958,7 @@ export default function Dashboard({ user, onLogout }) {
                         location: formData.get('location'),
                         country: formData.get('country'),
                         region: formData.get('region'),
+                        holiday_region: formData.get('holiday_region') || null,
                         vacation_days_per_year: parseInt(formData.get('vacation_days_per_year')),
                         contract_type: formData.get('contract_type'),
                         contract_start_date: formData.get('contract_start_date') || null,
@@ -1057,6 +1072,20 @@ export default function Dashboard({ user, onLogout }) {
                           defaultValue={editingEmployee.region || ''}
                           placeholder="e.g., North America, EMEA, APAC"
                         />
+                      </div>
+                      <div className="form-group">
+                        <label>Holiday Region (for day-off calculations)</label>
+                        <select name="holiday_region" defaultValue={editingEmployee.holiday_region || ''}>
+                          <option value="">Not set (no regional holidays)</option>
+                          {holidayRegions.map(region => (
+                            <option key={region.code} value={region.code}>
+                              {region.name}
+                            </option>
+                          ))}
+                        </select>
+                        <small style={{ color: '#666', fontSize: '12px' }}>
+                          Defines which regional holidays are excluded from working days calculations.
+                        </small>
                       </div>
                       <div className="form-group">
                         <label>Vacation Days Per Year</label>

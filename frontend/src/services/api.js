@@ -43,6 +43,8 @@ export const employeeAPI = {
   }),
   sync: () => fetchAPI('/api/employees/sync', { method: 'POST' }),
   getTeam: () => fetchAPI('/api/employees/team'),
+  getHolidayRegions: () => fetchAPI('/api/employees/holiday-regions'),
+  getRegionHolidays: (regionCode, year) => fetchAPI(`/api/employees/holiday-regions/${regionCode}/holidays/${year}`),
 };
 
 export const timeoffAPI = {

@@ -172,7 +172,7 @@ def update_employee(email):
     # Managers have read-only access (they can only view their team members)
     updatable_fields = [
         'manager_email', 'department', 'job_title', 'location',
-        'country', 'region', 'vacation_days_per_year',
+        'country', 'region', 'holiday_region', 'vacation_days_per_year',
         # HHRR fields
         'contract_type', 'contract_start_date', 'contract_end_date', 'contract_document_url',
         'salary', 'salary_currency', 'has_bonus', 'bonus_type', 'bonus_percentage',

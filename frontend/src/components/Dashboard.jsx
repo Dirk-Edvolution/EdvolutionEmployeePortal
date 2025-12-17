@@ -630,11 +630,15 @@ export default function Dashboard({ user, onLogout }) {
                 <div className="employees-stats">
                   <div className="stat-card">
                     <div className="stat-value">{employees.length}</div>
-                    <div className="stat-label">Total Employees</div>
+                    <div className="stat-label">Total Users</div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-value">{employees.filter(e => e.manager_email).length}</div>
-                    <div className="stat-label">With Managers</div>
+                    <div className="stat-value">{employees.filter(e => e.organizational_unit?.includes('/Employees')).length}</div>
+                    <div className="stat-label">Employees</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-value">{employees.filter(e => !e.organizational_unit?.includes('/Employees')).length}</div>
+                    <div className="stat-label">Externals</div>
                   </div>
                   <div className="stat-card">
                     <div className="stat-value">{[...new Set(employees.map(e => e.department).filter(Boolean))].length}</div>

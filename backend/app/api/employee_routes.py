@@ -209,20 +209,18 @@ def update_employee(email):
 @employee_bp.route('/sync', methods=['POST'])
 @admin_required
 def sync_from_workspace():
-    """Sync employees from Google Workspace (admin only) - Only syncs from /Employees OU"""
-    from backend.config.settings import EMPLOYEE_OU
-
+    """Sync ALL users from Google Workspace (admin only) - Refreshes data for all users"""
     credentials = get_credentials_from_session()
     workspace = WorkspaceService(credentials)
     db = FirestoreService()
 
     try:
-        # Only sync users from the Employees OU
-        synced_count = workspace.sync_all_users_to_portal(db, filter_ou=EMPLOYEE_OU)
+        # Sync ALL users from Workspace (no filter)
+        synced_count = workspace.sync_all_users_to_portal(db, filter_ou=None)
         return jsonify({
             'success': True,
             'synced_count': synced_count,
-            'message': f'Successfully synced {synced_count} employees from {EMPLOYEE_OU} OU'
+            'message': f'Successfully synced {synced_count} users from Google Workspace'
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

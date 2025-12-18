@@ -25,7 +25,7 @@ def create_app():
     app.secret_key = FLASK_SECRET_KEY
     app.config['SESSION_COOKIE_SECURE'] = True  # Always use secure cookies
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for OAuth redirects from Google
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Use Lax instead of None for better compatibility
     app.config['SESSION_COOKIE_PATH'] = '/'
     app.config['SESSION_COOKIE_NAME'] = 'session'
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour session lifetime

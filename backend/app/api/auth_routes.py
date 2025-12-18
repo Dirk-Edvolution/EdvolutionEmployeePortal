@@ -17,6 +17,9 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 @auth_bp.route('/login')
 def login():
     """Initiate OAuth flow"""
+    import logging
+    logger = logging.getLogger(__name__)
+
     flow = create_oauth_flow()
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -25,6 +28,11 @@ def login():
     )
 
     session['state'] = state
+    session.modified = True  # Explicitly mark session as modified
+
+    logger.info(f"Login: Set state in session: {state}")
+    logger.info(f"Login: Session keys after setting state: {list(session.keys())}")
+
     return redirect(authorization_url)
 
 

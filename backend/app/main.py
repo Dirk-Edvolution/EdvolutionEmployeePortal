@@ -25,7 +25,8 @@ def create_app():
     app.secret_key = FLASK_SECRET_KEY
     app.config['SESSION_COOKIE_SECURE'] = FLASK_ENV == 'production'
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for OAuth redirects from Google
+    app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem sessions instead of signed cookies
 
     # Enable CORS
     CORS(app, supports_credentials=True, origins=[

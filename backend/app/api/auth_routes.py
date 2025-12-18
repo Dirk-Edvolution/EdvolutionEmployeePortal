@@ -10,8 +10,30 @@ from backend.app.utils.auth import (
 )
 from backend.app.services import FirestoreService
 from backend.config.settings import FLASK_ENV
+import time
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+# In-memory state store for OAuth (simple dict with expiration)
+# This works within a single Cloud Run container instance
+_oauth_states = {}
+
+def _clean_expired_states():
+    """Remove expired states (older than 10 minutes)"""
+    now = time.time()
+    expired = [k for k, v in _oauth_states.items() if now - v['timestamp'] > 600]
+    for k in expired:
+        del _oauth_states[k]
+
+def _store_state(state):
+    """Store OAuth state"""
+    _clean_expired_states()
+    _oauth_states[state] = {'timestamp': time.time()}
+
+def _verify_state(state):
+    """Verify and remove OAuth state"""
+    _clean_expired_states()
+    return _oauth_states.pop(state, None) is not None
 
 
 @auth_bp.route('/login')
@@ -27,11 +49,11 @@ def login():
         prompt='consent'  # Force consent to get refresh token
     )
 
-    session['state'] = state
-    session.modified = True  # Explicitly mark session as modified
+    # Store state in server-side memory instead of client session
+    _store_state(state)
 
-    logger.info(f"Login: Set state in session: {state}")
-    logger.info(f"Login: Session keys after setting state: {list(session.keys())}")
+    logger.info(f"Login: Stored OAuth state in memory: {state}")
+    logger.info(f"Login: Total stored states: {len(_oauth_states)}")
 
     return redirect(authorization_url)
 
@@ -42,20 +64,19 @@ def callback():
     import logging
     logger = logging.getLogger(__name__)
 
-    state_from_session = session.get('state')
     state_from_request = request.args.get('state')
 
-    logger.info(f"Session state: {state_from_session}, Request state: {state_from_request}")
-    logger.info(f"Session keys: {list(session.keys())}")
-    logger.info(f"Request URL: {request.url}")
+    logger.info(f"Callback: Received state: {state_from_request}")
+    logger.info(f"Callback: Total stored states: {len(_oauth_states)}")
+    logger.info(f"Callback: Stored states: {list(_oauth_states.keys())}")
 
-    if not state_from_session or state_from_session != state_from_request:
+    # Verify state from server-side memory
+    if not state_from_request or not _verify_state(state_from_request):
         return jsonify({
             'error': 'Invalid state parameter',
             'debug': {
-                'session_state': state_from_session,
                 'request_state': state_from_request,
-                'session_has_state': 'state' in session
+                'state_found_in_memory': state_from_request in _oauth_states if state_from_request else False
             }
         }), 400
 

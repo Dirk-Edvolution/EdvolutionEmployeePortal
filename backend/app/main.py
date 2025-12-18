@@ -26,7 +26,15 @@ def create_app():
     app.config['SESSION_COOKIE_SECURE'] = True  # Always use secure cookies
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for OAuth redirects from Google
+    app.config['SESSION_COOKIE_PATH'] = '/'
+    app.config['SESSION_COOKIE_NAME'] = 'session'
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour session lifetime
+
+    # Make sessions permanent so they're actually saved
+    from flask import session as flask_session
+    @app.before_request
+    def make_session_permanent():
+        flask_session.permanent = True
 
     # Enable CORS
     CORS(app, supports_credentials=True, origins=[

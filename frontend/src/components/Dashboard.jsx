@@ -633,11 +633,11 @@ export default function Dashboard({ user, onLogout }) {
                     <div className="stat-label">Total Users</div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-value">{employees.filter(e => e.organizational_unit?.includes('/Employees')).length}</div>
+                    <div className="stat-value">{employees.filter(e => e.organizational_unit?.includes('Employees')).length}</div>
                     <div className="stat-label">Employees</div>
                   </div>
                   <div className="stat-card">
-                    <div className="stat-value">{employees.filter(e => !e.organizational_unit?.includes('/Employees')).length}</div>
+                    <div className="stat-value">{employees.filter(e => !e.organizational_unit?.includes('Employees')).length}</div>
                     <div className="stat-label">Externals</div>
                   </div>
                   <div className="stat-card">

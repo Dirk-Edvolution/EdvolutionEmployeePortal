@@ -31,10 +31,25 @@ def login():
 @auth_bp.route('/callback')
 def callback():
     """OAuth callback handler"""
-    state = session.get('state')
+    import logging
+    logger = logging.getLogger(__name__)
 
-    if not state or state != request.args.get('state'):
-        return jsonify({'error': 'Invalid state parameter'}), 400
+    state_from_session = session.get('state')
+    state_from_request = request.args.get('state')
+
+    logger.info(f"Session state: {state_from_session}, Request state: {state_from_request}")
+    logger.info(f"Session keys: {list(session.keys())}")
+    logger.info(f"Request URL: {request.url}")
+
+    if not state_from_session or state_from_session != state_from_request:
+        return jsonify({
+            'error': 'Invalid state parameter',
+            'debug': {
+                'session_state': state_from_session,
+                'request_state': state_from_request,
+                'session_has_state': 'state' in session
+            }
+        }), 400
 
     flow = create_oauth_flow()
     flow.fetch_token(authorization_response=request.url)

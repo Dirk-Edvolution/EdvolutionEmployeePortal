@@ -49,7 +49,7 @@ def create_timeoff_request():
     working_days = HolidayService.count_working_days(
         start_date,
         end_date,
-        employee.holiday_region
+        employee.holiday_region or 'mexico'
     )
 
     # Create request
@@ -658,14 +658,18 @@ def preview_working_days():
 
     # Calculate working days and get holidays in range
     from backend.app.services.holiday_service import HolidayService
+    import logging
+    logger = logging.getLogger(__name__)
 
     working_days = HolidayService.count_working_days(
         start_date,
         end_date,
-        employee.holiday_region
+        employee.holiday_region or 'mexico'
     )
 
     calendar_days = (end_date - start_date).days + 1
+
+    logger.info(f"Preview calculation: {start_date} to {end_date}, region={employee.holiday_region}, calendar_days={calendar_days}, working_days={working_days}")
 
     # Get holidays in range
     holidays_in_range = HolidayService.get_holidays_in_range(

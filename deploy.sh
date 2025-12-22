@@ -34,17 +34,28 @@ gcloud builds submit --tag $IMAGE_URL \
   --gcs-source-staging-dir="gs://${PROJECT_ID}-staging/source" \
   --gcs-log-dir="gs://${PROJECT_ID}-staging/logs"
 
-# Get the service URL (if it exists, to build correct redirect URI)
-echo "🔍 Checking for existing service..."
-EXISTING_SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --format 'value(status.url)' 2>/dev/null || echo "")
+# Set production configuration if not already set
+: ${GOOGLE_CLIENT_ID:=""}
+: ${GOOGLE_CLIENT_SECRET:=""}
+: ${REDIRECT_URI:="https://rrhh.edvolution.io/auth/callback"}
+: ${WORKSPACE_DOMAIN:="edvolution.io"}
+: ${WORKSPACE_ADMIN_EMAIL:="dirk@edvolution.io"}
+: ${ADMIN_USERS:="dirk@edvolution.io"}
 
-if [ -z "$EXISTING_SERVICE_URL" ]; then
-  echo "⚠️  Service not found. Using placeholder URL for GOOGLE_REDIRECT_URI."
-  REDIRECT_URI="https://${SERVICE_NAME}-5n2ivebvra-uc.a.run.app/auth/callback"
-else
-  REDIRECT_URI="${EXISTING_SERVICE_URL}/auth/callback"
-  echo "✓ Using existing service URL for redirect: $REDIRECT_URI"
+# Validate required OAuth credentials
+if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
+    echo "❌ ERROR: OAuth credentials not set!"
+    echo "Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables"
+    echo "Or extract them from Cloud Run:"
+    echo "  export GOOGLE_CLIENT_ID=\$(gcloud run services describe employee-portal --region us-central1 --format='value(spec.template.spec.containers[0].env.find({\"name\":\"GOOGLE_CLIENT_ID\"}).value)')"
+    echo "  export GOOGLE_CLIENT_SECRET=\$(gcloud run services describe employee-portal --region us-central1 --format='value(spec.template.spec.containers[0].env.find({\"name\":\"GOOGLE_CLIENT_SECRET\"}).value)')"
+    exit 1
 fi
+
+echo "🔍 OAuth Configuration:"
+echo "  - Client ID: ${GOOGLE_CLIENT_ID:0:20}... (hidden)"
+echo "  - Redirect URI: ${REDIRECT_URI}"
+echo "  - Workspace Domain: ${WORKSPACE_DOMAIN}"
 
 # Deploy to Cloud Run
 echo "🚢 Deploying to Cloud Run..."
@@ -66,14 +77,10 @@ SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region $REGION --form
 echo "✅ Deployment complete!"
 echo "🌐 Service URL: $SERVICE_URL"
 echo ""
-echo "📝 Important Notes:"
-echo "1. OAuth redirect URI is set to: ${REDIRECT_URI}"
-echo "2. Make sure this matches the authorized redirect URI in Google Cloud Console"
-echo "3. FLASK_SECRET_KEY and OAuth credentials are set from environment variables"
+echo "📝 Configuration Summary:"
+echo "  - OAuth Client ID: ${GOOGLE_CLIENT_ID}"
+echo "  - OAuth Redirect URI: ${REDIRECT_URI}"
+echo "  - Workspace Domain: ${WORKSPACE_DOMAIN}"
+echo "  - Admin Users: ${ADMIN_USERS}"
 echo ""
-echo "Environment variables used:"
-echo "  - GOOGLE_CLIENT_ID (from env)"
-echo "  - GOOGLE_CLIENT_SECRET (from env)"
-echo "  - FLASK_SECRET_KEY (from env)"
-echo "  - WORKSPACE_DOMAIN=${WORKSPACE_DOMAIN}"
-echo "  - ADMIN_USERS=${ADMIN_USERS}"
+echo "⚠️  Make sure ${REDIRECT_URI} is in the authorized redirect URIs in Google Cloud Console"

@@ -26,6 +26,13 @@ def create_timeoff_request():
     if not employee:
         return jsonify({'error': 'Employee profile not found'}), 404
 
+    # Validate that employee has holiday_region set
+    if not employee.holiday_region:
+        return jsonify({
+            'error': 'Holiday region not configured',
+            'message': 'Your holiday region (country/location) has not been set up in the system. Please contact your supervisor or HR administrator to configure your holiday calendar before requesting time off.'
+        }), 400
+
     data = request.json
 
     # Validate required fields
@@ -49,7 +56,7 @@ def create_timeoff_request():
     working_days = HolidayService.count_working_days(
         start_date,
         end_date,
-        employee.holiday_region or 'mexico'
+        employee.holiday_region
     )
 
     # Create request
@@ -639,6 +646,13 @@ def preview_working_days():
     if not employee:
         return jsonify({'error': 'Employee not found'}), 404
 
+    # Validate that employee has holiday_region set
+    if not employee.holiday_region:
+        return jsonify({
+            'error': 'Holiday region not configured',
+            'message': 'Your holiday region (country/location) has not been set up in the system. Please contact your supervisor or HR administrator to configure your holiday calendar before requesting time off.'
+        }), 400
+
     data = request.json
 
     # Validate required fields
@@ -664,7 +678,7 @@ def preview_working_days():
     working_days = HolidayService.count_working_days(
         start_date,
         end_date,
-        employee.holiday_region or 'mexico'
+        employee.holiday_region
     )
 
     calendar_days = (end_date - start_date).days + 1
@@ -675,7 +689,7 @@ def preview_working_days():
     holidays_in_range = HolidayService.get_holidays_in_range(
         start_date,
         end_date,
-        employee.holiday_region or 'mexico'
+        employee.holiday_region
     )
 
     # Get all non-working days (weekends + holidays)

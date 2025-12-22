@@ -54,7 +54,14 @@ def create_timeoff_request():
         manager_email=employee.manager_email,
     )
 
+    # Calculate working days based on employee's holiday region
+    working_days = timeoff_request.get_working_days_count(employee.holiday_region)
+
     request_id = db.create_timeoff_request(timeoff_request)
+
+    # Add working days to response
+    response_dict = timeoff_request.to_dict()
+    response_dict['working_days_count'] = working_days
 
     # Send notification to manager
     if employee.manager_email:
@@ -68,7 +75,7 @@ def create_timeoff_request():
                 employee_email=current_email,
                 start_date=str(start_date),
                 end_date=str(end_date),
-                days_count=timeoff_request.days_count,
+                days_count=working_days,  # Use working days for notifications
                 timeoff_type=data['timeoff_type'],
                 notes=data.get('notes'),
                 request_id=request_id,
@@ -89,7 +96,7 @@ def create_timeoff_request():
 
     return jsonify({
         'request_id': request_id,
-        **timeoff_request.to_dict()
+        **response_dict
     }), 201
 
 
@@ -99,14 +106,20 @@ def get_my_requests():
     """Get current user's time-off requests"""
     db = FirestoreService()
     current_email = get_current_user_email()
+    employee = db.get_employee(current_email)
 
     year = request.args.get('year', type=int)
     requests = db.get_employee_timeoff_requests(current_email, year)
 
-    return jsonify([
-        {'request_id': rid, **req.to_dict()}
-        for rid, req in requests
-    ]), 200
+    # Add working days count to each request
+    result = []
+    for rid, req in requests:
+        req_dict = req.to_dict()
+        req_dict['request_id'] = rid
+        req_dict['working_days_count'] = req.get_working_days_count(employee.holiday_region if employee else None)
+        result.append(req_dict)
+
+    return jsonify(result), 200
 
 
 @timeoff_bp.route('/requests/<request_id>', methods=['GET'])
@@ -191,6 +204,9 @@ def approve_as_manager(request_id):
         notification_service = NotificationService(credentials)
         employee = db.get_employee(timeoff_request.employee_email)
 
+        # Calculate working days for notifications
+        working_days = timeoff_request.get_working_days_count(employee.holiday_region if employee else None)
+
         admin_task_ids = []
         for admin_email in ADMIN_USERS:
             if admin_email:  # Skip empty strings
@@ -200,7 +216,7 @@ def approve_as_manager(request_id):
                     employee_email=timeoff_request.employee_email,
                     start_date=str(timeoff_request.start_date),
                     end_date=str(timeoff_request.end_date),
-                    days_count=timeoff_request.days_count,
+                    days_count=working_days,  # Use working days
                     timeoff_type=timeoff_request.timeoff_type.value,
                     notes=timeoff_request.notes,
                     request_id=request_id,
@@ -228,7 +244,7 @@ def approve_as_manager(request_id):
                 employee_name=employee.full_name or employee.email,
                 start_date=str(timeoff_request.start_date),
                 end_date=str(timeoff_request.end_date),
-                days_count=timeoff_request.days_count,
+                days_count=working_days,  # Use working days
                 timeoff_type=timeoff_request.timeoff_type.value,
                 status='manager_approved'
             )
@@ -293,12 +309,15 @@ def approve_as_admin(request_id):
         employee = db.get_employee(timeoff_request.employee_email)
 
         if employee:
+            # Calculate working days for notification
+            working_days = timeoff_request.get_working_days_count(employee.holiday_region)
+
             notification_service.send_timeoff_status_notification(
                 employee_email=timeoff_request.employee_email,
                 employee_name=employee.full_name or employee.email,
                 start_date=str(timeoff_request.start_date),
                 end_date=str(timeoff_request.end_date),
-                days_count=timeoff_request.days_count,
+                days_count=working_days,  # Use working days
                 timeoff_type=timeoff_request.timeoff_type.value,
                 status='approved'
             )
@@ -369,12 +388,15 @@ def reject_request(request_id):
         employee = db.get_employee(timeoff_request.employee_email)
 
         if employee:
+            # Calculate working days for notification
+            working_days = timeoff_request.get_working_days_count(employee.holiday_region)
+
             notification_service.send_timeoff_status_notification(
                 employee_email=timeoff_request.employee_email,
                 employee_name=employee.full_name or employee.email,
                 start_date=str(timeoff_request.start_date),
                 end_date=str(timeoff_request.end_date),
-                days_count=timeoff_request.days_count,
+                days_count=working_days,  # Use working days
                 timeoff_type=timeoff_request.timeoff_type.value,
                 status='rejected',
                 rejection_reason=reason
@@ -434,8 +456,8 @@ def update_timeoff_request(request_id):
     if 'notes' in data:
         timeoff_request.notes = data['notes']
 
-    # Recalculate days count
-    timeoff_request.days_count = (timeoff_request.end_date - timeoff_request.start_date).days + 1
+    # Note: days_count is automatically calculated as a property
+    # Working days are calculated dynamically based on employee's holiday_region
     timeoff_request.updated_at = datetime.utcnow()
 
     db.update_timeoff_request(request_id, timeoff_request)

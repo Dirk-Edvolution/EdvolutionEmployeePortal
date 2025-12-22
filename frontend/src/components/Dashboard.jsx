@@ -226,7 +226,13 @@ export default function Dashboard({ user, onLogout }) {
     <div className="dashboard">
       <nav className="sidebar">
         <div className="sidebar-header">
-          <h2>🏢 Employee Portal</h2>
+          <div className="logo-container">
+            <img src="/logo-edvolution.svg" alt="PAPEPE Logo" className="app-logo" />
+            <div className="app-title">
+              <h2>PAPEPE</h2>
+              <p className="app-subtitle">Portal de Autoservicio Para el Personal Edvolution</p>
+            </div>
+          </div>
           <div className="user-info">
             {user.photo_url && <img src={user.photo_url} alt={user.name} />}
             <div>

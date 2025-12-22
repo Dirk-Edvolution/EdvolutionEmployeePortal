@@ -23,9 +23,25 @@
   text-align: center;
 }
 
+.login-logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: white;
+  padding: 8px;
+}
+
 .login-header h1 {
   font-size: 32px;
   margin-bottom: 8px;
+}
+
+.login-subtitle {
+  font-size: 12px;
+  margin: 4px 0 8px 0;
+  opacity: 0.95;
+  font-weight: 500;
 }
 
 .login-header p {

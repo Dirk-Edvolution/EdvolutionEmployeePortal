@@ -6,8 +6,10 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>🏢 Employee Portal</h1>
-          <p>Vacation & Time-off Management</p>
+          <img src="/logo-edvolution.svg" alt="PAPEPE Logo" className="login-logo" />
+          <h1>PAPEPE</h1>
+          <p className="login-subtitle">Portal de Autoservicio Para el Personal Edvolution</p>
+          <p>Gestión de Vacaciones y Tiempo Libre</p>
         </div>
         <div className="login-content">
           <h2>Welcome!</h2>

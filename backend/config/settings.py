@@ -44,7 +44,10 @@ FLASK_ENV = os.getenv('FLASK_ENV', 'development')
 PORT = int(os.getenv('PORT', 8080))
 
 # Admin Users - strip whitespace and filter empty strings
-ADMIN_USERS = [email.strip() for email in os.getenv('ADMIN_USERS', '').split(',') if email.strip()]
+# Support both comma and semicolon as separators
+admin_users_str = os.getenv('ADMIN_USERS', '')
+separator = ';' if ';' in admin_users_str else ','
+ADMIN_USERS = [email.strip() for email in admin_users_str.split(separator) if email.strip()]
 
 # Firestore Collections
 EMPLOYEES_COLLECTION = os.getenv('EMPLOYEES_COLLECTION', 'employees')

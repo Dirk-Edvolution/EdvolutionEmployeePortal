@@ -15,6 +15,9 @@ export default function Dashboard({ user, onLogout }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDepartment, setFilterDepartment] = useState('')
   const [holidayRegions, setHolidayRegions] = useState([])
+  const [workingDaysPreview, setWorkingDaysPreview] = useState(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [pendingRequestData, setPendingRequestData] = useState(null)
 
   useEffect(() => {
     loadData()
@@ -44,19 +47,42 @@ export default function Dashboard({ user, onLogout }) {
     setTimeout(() => setMessage(null), 5000)
   }
 
-  async function handleCreateRequest(e) {
+  async function handlePreviewRequest(e) {
     e.preventDefault()
     setLoading(true)
     try {
       const formData = new FormData(e.target)
-      await timeoffAPI.create({
+      const requestData = {
         start_date: formData.get('start_date'),
         end_date: formData.get('end_date'),
         timeoff_type: formData.get('timeoff_type'),
         notes: formData.get('notes'),
+      }
+
+      // Get working days preview
+      const preview = await timeoffAPI.previewWorkingDays({
+        start_date: requestData.start_date,
+        end_date: requestData.end_date,
       })
+
+      setWorkingDaysPreview(preview)
+      setPendingRequestData(requestData)
+      setShowPreview(true)
+    } catch (error) {
+      showMessage('Failed to preview request: ' + error.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleConfirmRequest() {
+    setLoading(true)
+    try {
+      await timeoffAPI.create(pendingRequestData)
       showMessage('Time-off request submitted successfully!')
-      e.target.reset()
+      setShowPreview(false)
+      setWorkingDaysPreview(null)
+      setPendingRequestData(null)
       await loadData()
       setView('my-requests')
     } catch (error) {
@@ -64,6 +90,12 @@ export default function Dashboard({ user, onLogout }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleCancelPreview() {
+    setShowPreview(false)
+    setWorkingDaysPreview(null)
+    setPendingRequestData(null)
   }
 
   async function handleApprove(requestId, isManager) {
@@ -275,7 +307,7 @@ export default function Dashboard({ user, onLogout }) {
                       <div key={id} className="request-card">
                         <span className={`status-badge status-${req.status}`}>{req.status}</span>
                         <strong>{new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()}</strong>
-                        <span>{req.timeoff_type.replace('_', ' ')} ({req.days_count} days)</span>
+                        <span>{req.timeoff_type.replace('_', ' ')} ({req.working_days_count ?? req.days_count} working days)</span>
                       </div>
                     );
                   })}
@@ -288,31 +320,77 @@ export default function Dashboard({ user, onLogout }) {
         {view === 'new-request' && (
           <div className="view-content">
             <h1>New Time-off Request</h1>
-            <form onSubmit={handleCreateRequest} className="request-form">
-              <div className="form-group">
-                <label>Start Date</label>
-                <input type="date" name="start_date" required />
+            {!showPreview ? (
+              <form onSubmit={handlePreviewRequest} className="request-form">
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input type="date" name="start_date" required />
+                </div>
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input type="date" name="end_date" required />
+                </div>
+                <div className="form-group">
+                  <label>Type</label>
+                  <select name="timeoff_type" required>
+                    <option value="vacation">Vacation</option>
+                    <option value="sick_leave">Sick Leave</option>
+                    <option value="day_off">Day Off</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Notes (optional)</label>
+                  <textarea name="notes" rows="4" placeholder="Any additional information..."></textarea>
+                </div>
+                <button type="submit" disabled={loading} className="submit-btn">
+                  {loading ? 'Calculating...' : 'Preview Request'}
+                </button>
+              </form>
+            ) : (
+              <div className="preview-section">
+                <h2>Request Preview</h2>
+                <div className="preview-info">
+                  <p><strong>Your time-off calendar is set to: {workingDaysPreview?.holiday_region_name || 'Mexico'}</strong></p>
+                  <p>You selected <strong>{workingDaysPreview?.calendar_days || 0} calendar days</strong> ({new Date(workingDaysPreview?.start_date).toLocaleDateString()} - {new Date(workingDaysPreview?.end_date).toLocaleDateString()})</p>
+                </div>
+
+                {workingDaysPreview?.non_working_days && workingDaysPreview.non_working_days.length > 0 && (
+                  <div className="non-working-days">
+                    <h3>Non-Working Days in Your Selected Range:</h3>
+                    <ul>
+                      {workingDaysPreview.non_working_days.map((day, idx) => (
+                        <li key={idx} className={`day-${day.type}`}>
+                          <strong>{new Date(day.date).toLocaleDateString()}</strong> - {day.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="working-days-summary">
+                  <p className="highlight">
+                    Only <strong>{workingDaysPreview?.working_days || 0} working days</strong> will be deducted from your vacation balance.
+                  </p>
+                  {vacationSummary && (
+                    <p className="balance-info">
+                      Current balance: {vacationSummary.remaining_days} days available
+                      {workingDaysPreview?.working_days && (
+                        <> → After this request: {vacationSummary.remaining_days - workingDaysPreview.working_days} days remaining</>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                <div className="preview-actions">
+                  <button onClick={handleConfirmRequest} disabled={loading} className="submit-btn">
+                    {loading ? 'Submitting...' : 'Confirm & Submit Request'}
+                  </button>
+                  <button onClick={handleCancelPreview} disabled={loading} className="cancel-btn">
+                    Go Back & Edit
+                  </button>
+                </div>
               </div>
-              <div className="form-group">
-                <label>End Date</label>
-                <input type="date" name="end_date" required />
-              </div>
-              <div className="form-group">
-                <label>Type</label>
-                <select name="timeoff_type" required>
-                  <option value="vacation">Vacation</option>
-                  <option value="sick_leave">Sick Leave</option>
-                  <option value="day_off">Day Off</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Notes (optional)</label>
-                <textarea name="notes" rows="4" placeholder="Any additional information..."></textarea>
-              </div>
-              <button type="submit" disabled={loading} className="submit-btn">
-                {loading ? 'Submitting...' : 'Submit Request'}
-              </button>
-            </form>
+            )}
           </div>
         )}
 
@@ -329,7 +407,7 @@ export default function Dashboard({ user, onLogout }) {
                     <div key={id} className="request-row">
                       <div className="request-info">
                         <strong>{new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()}</strong>
-                        <span>{req.timeoff_type.replace('_', ' ')} - {req.days_count} days</span>
+                        <span>{req.timeoff_type.replace('_', ' ')} - {req.working_days_count ?? req.days_count} working days</span>
                         {req.notes && <p className="notes"><strong>Your notes:</strong> {req.notes}</p>}
                         {req.status === 'rejected' && req.rejection_reason && (
                           <p className="notes" style={{ color: '#dc3545', background: '#ffe6e6', padding: '8px', borderRadius: '4px', marginTop: '8px' }}>
@@ -390,7 +468,7 @@ export default function Dashboard({ user, onLogout }) {
                         <span className={`status-badge status-${req.status}`}>{req.status.replace('_', ' ')}</span>
                       </div>
                       <div className="approval-details">
-                        <p><strong>Dates:</strong> {new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()} ({req.days_count} days)</p>
+                        <p><strong>Dates:</strong> {new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()} ({req.working_days_count ?? req.days_count} working days)</p>
                         <p><strong>Type:</strong> {req.timeoff_type.replace('_', ' ')}</p>
                         {req.notes && <p><strong>Notes:</strong> {req.notes}</p>}
                       </div>

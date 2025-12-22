@@ -156,7 +156,7 @@ class FirestoreService:
         return filtered
 
     def calculate_used_vacation_days(self, email: str, year: int) -> int:
-        """Calculate total vacation days used in a specific year"""
+        """Calculate total vacation days used in a specific year (working days only)"""
         requests = self.get_employee_timeoff_requests(email, year)
         employee = self.get_employee(email)
 
@@ -166,8 +166,13 @@ class FirestoreService:
         total_days = 0
         for _, req in requests:
             if req.status == 'approved' and req.timeoff_type == 'vacation':
-                # Use working days instead of calendar days
-                total_days += req.get_working_days_count(holiday_region)
+                # Use working_days_count if available (new requests),
+                # otherwise calculate it (old requests before the fix)
+                if req.working_days_count is not None:
+                    total_days += req.working_days_count
+                else:
+                    # Fallback for old requests: calculate working days
+                    total_days += req.get_working_days_count(holiday_region)
 
         return total_days
 

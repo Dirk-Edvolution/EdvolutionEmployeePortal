@@ -47,6 +47,8 @@ class TimeOffRequest:
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
         request_id: Optional[str] = None,
+        holiday_region: Optional[str] = None,
+        working_days_count: Optional[int] = None,
         **kwargs
     ):
         self.request_id = request_id
@@ -70,6 +72,8 @@ class TimeOffRequest:
         self.admin_task_ids = admin_task_ids or []
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at or datetime.utcnow()
+        self.holiday_region = holiday_region
+        self.working_days_count = working_days_count
 
     @property
     def days_count(self) -> int:
@@ -132,6 +136,8 @@ class TimeOffRequest:
             'created_at': safe_isoformat(self.created_at),
             'updated_at': safe_isoformat(self.updated_at),
             'days_count': self.days_count,
+            'holiday_region': self.holiday_region,
+            'working_days_count': self.working_days_count,
         }
 
     @classmethod

@@ -27,6 +27,15 @@ class HolidayService:
     # Format: {region: {year: [(date_str, name, note), ...]}}
     YEAR_SPECIFIC_HOLIDAYS = {
         'mexico': {
+            2024: [
+                ('2024-01-01', 'Año Nuevo', None),
+                ('2024-02-05', 'Día de la Constitución', None),
+                ('2024-03-18', 'Natalicio de Benito Juárez', 'Feriado puente'),
+                ('2024-05-01', 'Día del Trabajo', None),
+                ('2024-09-16', 'Día de la Independencia Mexicana', None),
+                ('2024-11-18', 'Día de la Revolución Mexicana', 'Feriado puente'),
+                ('2024-12-25', 'Navidad', None),
+            ],
             2025: [
                 ('2025-01-01', 'Año Nuevo', None),
                 ('2025-02-03', 'Día de la Constitución', 'Feriado puente. El festivo del 5 de febrero se traslada al lunes 3'),

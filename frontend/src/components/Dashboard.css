@@ -688,3 +688,96 @@
   font-size: 12px;
   font-weight: 500;
 }
+
+/* Preview Section Styles */
+.preview-section {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.preview-info {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.preview-info p {
+  margin: 8px 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.non-working-days {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.non-working-days h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #856404;
+  font-size: 18px;
+}
+
+.non-working-days ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.non-working-days li {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: white;
+}
+
+.non-working-days li.day-weekend {
+  border-left: 4px solid #6c757d;
+}
+
+.non-working-days li.day-holiday {
+  border-left: 4px solid #dc3545;
+  font-weight: 500;
+}
+
+.working-days-summary {
+  background: #d4edda;
+  border: 2px solid #28a745;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.working-days-summary .highlight {
+  font-size: 20px;
+  margin: 8px 0;
+  color: #155724;
+}
+
+.working-days-summary .balance-info {
+  font-size: 14px;
+  color: #155724;
+  margin-top: 12px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.preview-actions .cancel-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.preview-actions .cancel-btn:hover {
+  background: #5a6268;
+}

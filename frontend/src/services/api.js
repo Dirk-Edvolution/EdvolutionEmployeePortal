@@ -79,4 +79,8 @@ export const timeoffAPI = {
     method: 'POST',
   }),
   getVacationSummary: (year) => fetchAPI(`/api/timeoff/vacation-summary${year ? `?year=${year}` : ''}`),
+  previewWorkingDays: (data) => fetchAPI('/api/timeoff/preview-working-days', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 };

@@ -2,7 +2,7 @@
 Time-off request API routes
 """
 from flask import Blueprint, jsonify, request
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from backend.app.utils.auth import login_required, get_current_user_email, is_admin
 from backend.app.services import FirestoreService, CalendarService, GmailService, NotificationService
 from backend.app.models import TimeOffRequest, TimeOffType, ApprovalStatus, AuditAction
@@ -44,6 +44,14 @@ def create_timeoff_request():
     if end_date < start_date:
         return jsonify({'error': 'End date must be after start date'}), 400
 
+    # Calculate working days using employee's holiday region
+    from backend.app.services.holiday_service import HolidayService
+    working_days = HolidayService.count_working_days(
+        start_date,
+        end_date,
+        employee.holiday_region
+    )
+
     # Create request
     timeoff_request = TimeOffRequest(
         employee_email=current_email,
@@ -52,6 +60,8 @@ def create_timeoff_request():
         timeoff_type=TimeOffType(data['timeoff_type']),
         notes=data.get('notes'),
         manager_email=employee.manager_email,
+        holiday_region=employee.holiday_region,
+        working_days_count=working_days,
     )
 
     # Calculate working days based on employee's holiday region
@@ -616,3 +626,95 @@ def get_vacation_summary():
         'country': employee.country,
         'region': employee.region,
     }), 200
+
+
+@timeoff_bp.route('/preview-working-days', methods=['POST'])
+@login_required
+def preview_working_days():
+    """Preview working days calculation for a date range"""
+    db = FirestoreService()
+    current_email = get_current_user_email()
+    employee = db.get_employee(current_email)
+
+    if not employee:
+        return jsonify({'error': 'Employee not found'}), 404
+
+    data = request.json
+
+    # Validate required fields
+    if 'start_date' not in data or 'end_date' not in data:
+        return jsonify({'error': 'Missing start_date or end_date'}), 400
+
+    # Parse dates
+    try:
+        start_date = datetime.fromisoformat(data['start_date']).date()
+        end_date = datetime.fromisoformat(data['end_date']).date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+
+    # Validate dates
+    if end_date < start_date:
+        return jsonify({'error': 'End date must be after start date'}), 400
+
+    # Calculate working days and get holidays in range
+    from backend.app.services.holiday_service import HolidayService
+
+    working_days = HolidayService.count_working_days(
+        start_date,
+        end_date,
+        employee.holiday_region
+    )
+
+    calendar_days = (end_date - start_date).days + 1
+
+    # Get holidays in range
+    holidays_in_range = HolidayService.get_holidays_in_range(
+        start_date,
+        end_date,
+        employee.holiday_region or 'mexico'
+    )
+
+    # Get all non-working days (weekends + holidays)
+    non_working_days = []
+    current_date = start_date
+    while current_date <= end_date:
+        if HolidayService.is_weekend(current_date):
+            day_name = current_date.strftime('%A')
+            non_working_days.append({
+                'date': current_date.isoformat(),
+                'reason': f'Weekend ({day_name})',
+                'type': 'weekend'
+            })
+        elif HolidayService.is_public_holiday(current_date, employee.holiday_region or 'mexico'):
+            # Find the holiday name
+            holiday_name = 'Public Holiday'
+            for holiday in holidays_in_range:
+                if holiday['date'] == current_date:
+                    holiday_name = holiday['name']
+                    break
+            non_working_days.append({
+                'date': current_date.isoformat(),
+                'reason': holiday_name,
+                'type': 'holiday'
+            })
+        current_date += timedelta(days=1)
+
+    return jsonify({
+        'start_date': start_date.isoformat(),
+        'end_date': end_date.isoformat(),
+        'calendar_days': calendar_days,
+        'working_days': working_days,
+        'non_working_days': non_working_days,
+        'holiday_region': employee.holiday_region or 'mexico',
+        'holiday_region_name': _get_region_name(employee.holiday_region or 'mexico'),
+    }), 200
+
+
+def _get_region_name(region_code: str) -> str:
+    """Get human-readable region name"""
+    from backend.app.services.holiday_service import HolidayService
+    regions = HolidayService.get_available_regions()
+    for region in regions:
+        if region['code'] == region_code:
+            return region['name']
+    return region_code.title()

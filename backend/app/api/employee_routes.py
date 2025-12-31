@@ -127,6 +127,9 @@ def list_employees():
 @login_required
 def get_employee(email):
     """Get specific employee by email"""
+    from backend.app.utils import log_action
+    from backend.app.models import AuditAction
+
     db = FirestoreService()
     current_email = get_current_user_email()
 
@@ -145,12 +148,38 @@ def get_employee(email):
         return jsonify({'error': 'Permission denied'}), 403
 
     result = employee.to_dict()
+
+    # Filter sensitive fields for managers (not for admins or self-view)
+    if is_manager and not is_user_admin and not is_viewing_self:
+        # Remove sensitive fields that managers should not see
+        sensitive_fields = [
+            'salary', 'salary_currency', 'has_bonus', 'bonus_type',
+            'bonus_percentage', 'has_commission', 'commission_notes',
+            'personal_address', 'spouse_partner_name',
+            'spouse_partner_phone', 'spouse_partner_email'
+        ]
+        for field in sensitive_fields:
+            result.pop(field, None)
+
     # Add metadata about viewing permissions
     result['_permissions'] = {
         'can_edit': is_user_admin,  # Only admins can edit
         'is_manager_view': is_manager and not is_user_admin,  # Manager viewing team member (read-only)
         'is_admin': is_user_admin
     }
+
+    # Log manager views for audit trail (don't log self-views to reduce noise)
+    if is_manager and not is_viewing_self:
+        log_action(
+            user_email=current_email,
+            action=AuditAction.EMPLOYEE_VIEW,
+            resource_type='employee',
+            resource_id=email,
+            details={
+                'is_manager_view': True,
+                'viewed_fields': list(result.keys())
+            }
+        )
 
     return jsonify(result), 200
 
@@ -283,6 +312,9 @@ def get_team():
 @login_required
 def add_evaluation(email):
     """Add performance evaluation (manager or manager's manager only)"""
+    from backend.app.utils import log_action
+    from backend.app.models import AuditAction
+
     db = FirestoreService()
     current_email = get_current_user_email()
     employee = db.get_employee(email)
@@ -303,10 +335,14 @@ def add_evaluation(email):
 
     data = request.json
     evaluation = {
+        'id': f"eval_{int(datetime.utcnow().timestamp() * 1000)}",  # Unique ID for follow-ups
         'date': datetime.utcnow().isoformat(),
         'evaluator_email': current_email,
+        'evaluator_name': db.get_employee(current_email).full_name if db.get_employee(current_email) else current_email,
         'evaluation_text': data.get('evaluation_text', ''),
-        'rating': data.get('rating'),  # Optional numeric rating
+        'rating': data.get('rating'),  # Optional numeric rating (1-5)
+        'goals': data.get('goals', []),  # List of goals/objectives
+        'follow_ups': []  # List of follow-up notes
     }
 
     if not employee.evaluations:
@@ -316,7 +352,84 @@ def add_evaluation(email):
 
     db.update_employee(employee)
 
+    # Log evaluation creation
+    log_action(
+        user_email=current_email,
+        action=AuditAction.EVALUATION_CREATE,
+        resource_type='employee',
+        resource_id=email,
+        details={
+            'evaluation_id': evaluation['id'],
+            'rating': evaluation.get('rating'),
+            'has_goals': len(evaluation.get('goals', [])) > 0
+        }
+    )
+
     return jsonify({'success': True, 'evaluation': evaluation}), 201
+
+
+@employee_bp.route('/<email>/evaluations/<evaluation_id>/follow-up', methods=['POST'])
+@login_required
+def add_evaluation_followup(email, evaluation_id):
+    """Add follow-up note to an existing evaluation (manager only)"""
+    from backend.app.utils import log_action
+    from backend.app.models import AuditAction
+
+    db = FirestoreService()
+    current_email = get_current_user_email()
+    employee = db.get_employee(email)
+
+    if not employee:
+        return jsonify({'error': 'Employee not found'}), 404
+
+    # Check if current user is the manager
+    is_manager = employee.manager_email == current_email
+
+    if not (is_admin(current_email) or is_manager):
+        return jsonify({'error': 'Permission denied. Only managers can add follow-ups.'}), 403
+
+    # Find the evaluation
+    evaluation_found = False
+    for evaluation in employee.evaluations:
+        if evaluation.get('id') == evaluation_id:
+            evaluation_found = True
+            data = request.json
+
+            # Create follow-up note
+            follow_up = {
+                'date': datetime.utcnow().isoformat(),
+                'author_email': current_email,
+                'author_name': db.get_employee(current_email).full_name if db.get_employee(current_email) else current_email,
+                'note': data.get('note', ''),
+                'progress_rating': data.get('progress_rating'),  # Optional: 1-5 rating of progress
+                'goals_updated': data.get('goals_updated', [])  # Optional: updated goals
+            }
+
+            # Initialize follow_ups list if it doesn't exist
+            if 'follow_ups' not in evaluation:
+                evaluation['follow_ups'] = []
+
+            evaluation['follow_ups'].append(follow_up)
+            employee.updated_at = datetime.utcnow()
+
+            db.update_employee(employee)
+
+            # Log follow-up
+            log_action(
+                user_email=current_email,
+                action=AuditAction.EVALUATION_CREATE,  # Reusing evaluation action
+                resource_type='evaluation_followup',
+                resource_id=email,
+                details={
+                    'evaluation_id': evaluation_id,
+                    'follow_up_count': len(evaluation['follow_ups'])
+                }
+            )
+
+            return jsonify({'success': True, 'follow_up': follow_up}), 201
+
+    if not evaluation_found:
+        return jsonify({'error': 'Evaluation not found'}), 404
 
 
 @employee_bp.route('/holiday-regions', methods=['GET'])

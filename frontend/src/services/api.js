@@ -45,6 +45,14 @@ export const employeeAPI = {
   getTeam: () => fetchAPI('/api/employees/team'),
   getHolidayRegions: () => fetchAPI('/api/employees/holiday-regions'),
   getRegionHolidays: (regionCode, year) => fetchAPI(`/api/employees/holiday-regions/${regionCode}/holidays/${year}`),
+  addEvaluation: (email, data) => fetchAPI(`/api/employees/${email}/evaluations`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  addEvaluationFollowUp: (email, evaluationId, data) => fetchAPI(`/api/employees/${email}/evaluations/${evaluationId}/follow-up`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 };
 
 export const timeoffAPI = {
@@ -53,6 +61,7 @@ export const timeoffAPI = {
     body: JSON.stringify(data),
   }),
   getMy: (year) => fetchAPI(`/api/timeoff/requests/my${year ? `?year=${year}` : ''}`),
+  getEmployeeHistory: (email, year) => fetchAPI(`/api/timeoff/requests/employee/${email}${year ? `?year=${year}` : ''}`),
   getOne: (id) => fetchAPI(`/api/timeoff/requests/${id}`),
   update: (id, data) => fetchAPI(`/api/timeoff/requests/${id}`, {
     method: 'PUT',

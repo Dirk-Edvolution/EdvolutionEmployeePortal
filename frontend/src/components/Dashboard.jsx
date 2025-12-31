@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { employeeAPI, timeoffAPI } from '../services/api'
+import { EmployeeDetailModal } from './EmployeeDetailModal'
 import './Dashboard.css'
 
 export default function Dashboard({ user, onLogout }) {
@@ -610,79 +611,10 @@ export default function Dashboard({ user, onLogout }) {
             </div>
 
             {editingEmployee && (
-              <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                  <h2>View Team Member: {editingEmployee.full_name || editingEmployee.email}</h2>
-                  <div className="info-message" style={{ background: '#e3f2fd', padding: '12px', borderRadius: '4px', marginBottom: '16px', fontSize: '14px' }}>
-                    ℹ️ As a manager, you can view your team members' information but cannot edit it. Only HR admins can modify employee data.
-                  </div>
-                  <div className="employee-view-only">
-                    <div className="form-group">
-                      <label>Organizational Unit (from Google Workspace)</label>
-                      <input
-                        type="text"
-                        value={editingEmployee.organizational_unit || 'Not set'}
-                        disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Department / Team</label>
-                      <input
-                        type="text"
-                        value={editingEmployee.department || 'Not set'}
-                        disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Job Title</label>
-                      <input
-                        type="text"
-                        value={editingEmployee.job_title || 'Not set'}
-                        disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Location</label>
-                      <input
-                        type="text"
-                        value={editingEmployee.location || 'Not set'}
-                        disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Country</label>
-                      <input
-                        type="text"
-                        value={editingEmployee.country || 'Not set'}
-                        disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Region</label>
-                      <input
-                        type="text"
-                        value={editingEmployee.region || 'Not set'}
-                        disabled
-                        style={{ background: '#f5f5f5', cursor: 'not-allowed' }}
-                      />
-                    </div>
-                    <div className="modal-actions">
-                      <button
-                        type="button"
-                        onClick={() => setEditingEmployee(null)}
-                        className="cancel-btn"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <EmployeeDetailModal
+                employee={editingEmployee}
+                onClose={() => setEditingEmployee(null)}
+              />
             )}
           </div>
         )}

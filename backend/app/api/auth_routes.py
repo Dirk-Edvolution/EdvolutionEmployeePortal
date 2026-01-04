@@ -42,7 +42,14 @@ def login():
     import logging
     logger = logging.getLogger(__name__)
 
-    flow = create_oauth_flow()
+    # Build dynamic redirect URI based on current request host
+    # This supports both production (rrhh.edvolution.io) and test URLs (test---employee-portal-...)
+    host_url = request.host_url.rstrip('/')
+    dynamic_redirect_uri = f"{host_url}/auth/callback"
+
+    logger.info(f"Login: Using dynamic redirect URI: {dynamic_redirect_uri}")
+
+    flow = create_oauth_flow(redirect_uri=dynamic_redirect_uri)
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
@@ -80,7 +87,13 @@ def callback():
             }
         }), 400
 
-    flow = create_oauth_flow()
+    # Build same dynamic redirect URI as in login route
+    host_url = request.host_url.rstrip('/')
+    dynamic_redirect_uri = f"{host_url}/auth/callback"
+
+    logger.info(f"Callback: Using dynamic redirect URI: {dynamic_redirect_uri}")
+
+    flow = create_oauth_flow(redirect_uri=dynamic_redirect_uri)
     flow.fetch_token(authorization_response=request.url)
 
     credentials = flow.credentials

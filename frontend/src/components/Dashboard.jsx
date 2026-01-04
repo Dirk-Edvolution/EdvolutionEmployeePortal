@@ -257,7 +257,7 @@ export default function Dashboard({ user, onLogout }) {
               ⏳ Approvals ({pendingApprovals.length})
             </li>
           )}
-          {employees.length > 0 && !user.is_admin && (
+          {employees.length > 0 && (
             <li className={view === 'team' ? 'active' : ''} onClick={() => setView('team')}>
               👥 My Team ({employees.length})
             </li>
@@ -502,7 +502,7 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         )}
 
-        {view === 'team' && employees.length > 0 && !user.is_admin && (
+        {view === 'team' && employees.length > 0 && (
           <div className="view-content">
             <h1>My Team</h1>
 

@@ -52,6 +52,9 @@ ADMIN_USERS = [email.strip() for email in admin_users_str.split(separator) if em
 # Firestore Collections
 EMPLOYEES_COLLECTION = os.getenv('EMPLOYEES_COLLECTION', 'employees')
 TIMEOFF_REQUESTS_COLLECTION = os.getenv('TIMEOFF_REQUESTS_COLLECTION', 'timeoff_requests')
+TRAVEL_REQUESTS_COLLECTION = os.getenv('TRAVEL_REQUESTS_COLLECTION', 'travel_requests')
+TOOL_REQUESTS_COLLECTION = os.getenv('TOOL_REQUESTS_COLLECTION', 'tool_requests')
+EMPLOYEE_ASSETS_COLLECTION = os.getenv('EMPLOYEE_ASSETS_COLLECTION', 'employee_assets')
 APPROVALS_COLLECTION = os.getenv('APPROVALS_COLLECTION', 'approvals')
 
 # Organizational Units for Employee Management
@@ -77,3 +80,7 @@ ENABLE_CHAT_NOTIFICATIONS = os.getenv('ENABLE_CHAT_NOTIFICATIONS', 'true').lower
 ENABLE_TASK_NOTIFICATIONS = os.getenv('ENABLE_TASK_NOTIFICATIONS', 'true').lower() == 'true'
 NOTIFICATION_RETRY_ATTEMPTS = int(os.getenv('NOTIFICATION_RETRY_ATTEMPTS', '3'))
 TASK_DUE_DAYS = int(os.getenv('TASK_DUE_DAYS', '2'))
+
+# Approval Notification Emails
+FINANCE_EMAIL = os.getenv('FINANCE_EMAIL', 'pagos@edvolution.io')
+TOOLS_PROCUREMENT_EMAIL = os.getenv('TOOLS_PROCUREMENT_EMAIL', 'pagos@edvolution.io')

@@ -502,7 +502,7 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         )}
 
-        {view === 'team' && employees.length > 0 && (
+        {view === 'team' && employees.length > 0  && (
           <div className="view-content">
             <h1>My Team</h1>
 

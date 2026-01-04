@@ -8,8 +8,14 @@ from backend.config.settings import (
     GCP_PROJECT_ID,
     EMPLOYEES_COLLECTION,
     TIMEOFF_REQUESTS_COLLECTION,
+    TRAVEL_REQUESTS_COLLECTION,
+    TOOL_REQUESTS_COLLECTION,
+    EMPLOYEE_ASSETS_COLLECTION,
 )
 from backend.app.models import Employee, TimeOffRequest, AuditLog
+from backend.app.models.travel_request import TravelRequest
+from backend.app.models.tool_request import ToolRequest
+from backend.app.models.employee_asset import EmployeeAsset
 
 
 class FirestoreService:
@@ -19,6 +25,9 @@ class FirestoreService:
         self.db = firestore.Client(project=GCP_PROJECT_ID)
         self.employees_ref = self.db.collection(EMPLOYEES_COLLECTION)
         self.timeoff_ref = self.db.collection(TIMEOFF_REQUESTS_COLLECTION)
+        self.travel_ref = self.db.collection(TRAVEL_REQUESTS_COLLECTION)
+        self.tool_ref = self.db.collection(TOOL_REQUESTS_COLLECTION)
+        self.assets_ref = self.db.collection(EMPLOYEE_ASSETS_COLLECTION)
         self.audit_log_ref = self.db.collection('audit_logs')
 
     # Employee operations
@@ -175,6 +184,122 @@ class FirestoreService:
                     total_days += req.get_working_days_count(holiday_region)
 
         return total_days
+
+    # Travel request operations
+    def create_travel_request(self, request: TravelRequest) -> str:
+        """Create new travel request and return its ID"""
+        doc_ref = self.travel_ref.document()
+        doc_ref.set(request.to_dict())
+        return doc_ref.id
+
+    def get_travel_request(self, request_id: str) -> Optional[TravelRequest]:
+        """Get travel request by ID"""
+        doc = self.travel_ref.document(request_id).get()
+        if doc.exists:
+            return TravelRequest.from_dict(request_id, doc.to_dict())
+        return None
+
+    def update_travel_request(self, request_id: str, request: TravelRequest) -> None:
+        """Update travel request"""
+        request.updated_at = datetime.utcnow()
+        self.travel_ref.document(request_id).update(request.to_dict())
+
+    def get_employee_travel_requests(self, email: str) -> List[tuple[str, TravelRequest]]:
+        """Get all travel requests for an employee"""
+        query = self.travel_ref.where('employee_email', '==', email)
+        docs = query.stream()
+        requests = [(doc.id, TravelRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+        return sorted(requests, key=lambda x: x[1].created_at, reverse=True)
+
+    def get_pending_travel_requests_for_manager(self, manager_email: str) -> List[tuple[str, TravelRequest]]:
+        """Get pending travel requests for employees managed by this manager"""
+        query = self.travel_ref.where('manager_email', '==', manager_email).where('status', '==', 'pending')
+        docs = query.stream()
+        return [(doc.id, TravelRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    def get_pending_travel_requests_for_admin(self) -> List[tuple[str, TravelRequest]]:
+        """Get travel requests pending admin approval"""
+        query = self.travel_ref.where('status', '==', 'manager_approved')
+        docs = query.stream()
+        return [(doc.id, TravelRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    # Tool request operations
+    def create_tool_request(self, request: ToolRequest) -> str:
+        """Create new tool request and return its ID"""
+        doc_ref = self.tool_ref.document()
+        doc_ref.set(request.to_dict())
+        return doc_ref.id
+
+    def get_tool_request(self, request_id: str) -> Optional[ToolRequest]:
+        """Get tool request by ID"""
+        doc = self.tool_ref.document(request_id).get()
+        if doc.exists:
+            return ToolRequest.from_dict(request_id, doc.to_dict())
+        return None
+
+    def update_tool_request(self, request_id: str, request: ToolRequest) -> None:
+        """Update tool request"""
+        request.updated_at = datetime.utcnow()
+        self.tool_ref.document(request_id).update(request.to_dict())
+
+    def get_employee_tool_requests(self, email: str) -> List[tuple[str, ToolRequest]]:
+        """Get all tool requests for an employee"""
+        query = self.tool_ref.where('employee_email', '==', email)
+        docs = query.stream()
+        requests = [(doc.id, ToolRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+        return sorted(requests, key=lambda x: x[1].created_at, reverse=True)
+
+    def get_pending_tool_requests_for_manager(self, manager_email: str) -> List[tuple[str, ToolRequest]]:
+        """Get pending tool requests for employees managed by this manager"""
+        query = self.tool_ref.where('manager_email', '==', manager_email).where('status', '==', 'pending')
+        docs = query.stream()
+        return [(doc.id, ToolRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    def get_pending_tool_requests_for_admin(self) -> List[tuple[str, ToolRequest]]:
+        """Get tool requests pending admin approval"""
+        query = self.tool_ref.where('status', '==', 'manager_approved')
+        docs = query.stream()
+        return [(doc.id, ToolRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    # Employee asset operations
+    def create_employee_asset(self, asset: EmployeeAsset) -> str:
+        """Create new employee asset and return its ID"""
+        doc_ref = self.assets_ref.document()
+        doc_ref.set(asset.to_dict())
+        return doc_ref.id
+
+    def get_employee_asset(self, asset_id: str) -> Optional[EmployeeAsset]:
+        """Get employee asset by ID"""
+        doc = self.assets_ref.document(asset_id).get()
+        if doc.exists:
+            return EmployeeAsset.from_dict(asset_id, doc.to_dict())
+        return None
+
+    def update_employee_asset(self, asset_id: str, asset: EmployeeAsset) -> None:
+        """Update employee asset"""
+        asset.updated_at = datetime.utcnow()
+        self.assets_ref.document(asset_id).update(asset.to_dict())
+
+    def delete_employee_asset(self, asset_id: str) -> None:
+        """Delete employee asset"""
+        self.assets_ref.document(asset_id).delete()
+
+    def get_employee_assets(self, email: str, active_only: bool = False) -> List[tuple[str, EmployeeAsset]]:
+        """Get all assets assigned to an employee"""
+        query = self.assets_ref.where('employee_email', '==', email)
+        docs = query.stream()
+        assets = [(doc.id, EmployeeAsset.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+        if active_only:
+            assets = [(aid, asset) for aid, asset in assets if asset.status == 'active']
+
+        return sorted(assets, key=lambda x: x[1].assigned_date, reverse=True)
+
+    def get_assets_by_type(self, asset_type: str) -> List[tuple[str, EmployeeAsset]]:
+        """Get all assets of a specific type"""
+        query = self.assets_ref.where('asset_type', '==', asset_type)
+        docs = query.stream()
+        return [(doc.id, EmployeeAsset.from_dict(doc.id, doc.to_dict())) for doc in docs]
 
     # Audit Log operations
     def create_audit_log(self, audit_log: AuditLog) -> str:

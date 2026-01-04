@@ -33,11 +33,15 @@ Convertir el portal en un portal de self-service completo para empleados con tre
 3. HR Admin aprueba → Status: `APPROVED`
 4. Sistema envía email a `pagos@edvolution.io` con copia a empleado y manager
 
-**Email Final:**
-- **To:** pagos@edvolution.io
+**Email Final (cuando status = APPROVED):**
+- **To:** `FINANCE_EMAIL` (variable de entorno - ej: pagos@edvolution.io)
 - **CC:** empleado, manager
 - **Subject:** Aprobación de Viaje - [Nombre Empleado] - [Destino]
 - **Body:** Itinerario completo, gastos detallados, monto total, tipo de desembolso
+
+**Variables de Configuración Requeridas:**
+- `FINANCE_EMAIL` - Email del área de administración para pagos
+- `TOOLS_PROCUREMENT_EMAIL` - Email para compra de herramientas (puede ser el mismo que FINANCE_EMAIL)
 
 ### 2. Sistema de Aprobación de Herramientas
 
@@ -173,6 +177,19 @@ Igual que viajes: Empleado → Manager → HR Admin
   "updated_at": "2024-06-15T10:00:00Z"
 }
 ```
+
+### Configuration (settings.py)
+
+**Nuevas Variables de Entorno:**
+```python
+# Notification Emails for Approvals
+FINANCE_EMAIL = os.getenv('FINANCE_EMAIL', 'pagos@edvolution.io')
+TOOLS_PROCUREMENT_EMAIL = os.getenv('TOOLS_PROCUREMENT_EMAIL', 'pagos@edvolution.io')
+```
+
+**Agregar a Cloud Run Environment Variables:**
+- `FINANCE_EMAIL` = pagos@edvolution.io (o el email que corresponda)
+- `TOOLS_PROCUREMENT_EMAIL` = pagos@edvolution.io (o el email que corresponda)
 
 ### Backend (Flask)
 
@@ -348,9 +365,12 @@ assetAPI: {
 
 ### Email
 - Usar `NotificationService.send_email()` existente
-- Email a pagos@edvolution.io solo cuando status = APPROVED
+- Email a `FINANCE_EMAIL` (configuración) solo cuando status = APPROVED
+- **CC:** Siempre incluir empleado y manager en copia
+- Para tool requests: enviar a `TOOLS_PROCUREMENT_EMAIL` (puede ser el mismo)
 - Incluir toda la información relevante en formato legible
 - Usar template HTML profesional
+- **NO hardcodear emails** - usar variables de configuración del sistema
 
 ### UX
 - Formularios claros y fáciles de usar

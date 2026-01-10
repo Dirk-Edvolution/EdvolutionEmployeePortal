@@ -31,15 +31,33 @@ export default function Dashboard({ user, onLogout }) {
 
   async function loadData() {
     try {
-      const [summary, myRequests, timeoffApprovals, tripApprovals, assetApprovals] = await Promise.all([
+      const [summary, myTimeoffRequests, myTripRequests, myAssetRequests, timeoffApprovals, tripApprovals, assetApprovals] = await Promise.all([
         timeoffAPI.getVacationSummary().catch(() => null),
         timeoffAPI.getMy().catch(() => []),
+        tripAPI.getMy().catch(() => []),
+        assetAPI.getMy().catch(() => []),
         timeoffAPI.getPendingApprovals().catch(() => []),
         tripAPI.getPendingApprovals().catch(() => []),
         assetAPI.getPendingApprovals().catch(() => []),
       ])
       setVacationSummary(summary)
-      setRequests(Array.isArray(myRequests) ? myRequests : [])
+
+      // Combine all my requests and add request type
+      const allRequests = [
+        ...(Array.isArray(myTimeoffRequests) ? myTimeoffRequests : []).map(item => {
+          const [id, req] = Array.isArray(item) ? item : [item.request_id || Math.random(), item];
+          return [id, { ...req, request_type: 'timeoff' }];
+        }),
+        ...(Array.isArray(myTripRequests) ? myTripRequests : []).map(item => {
+          const [id, req] = Array.isArray(item) ? item : [item.request_id || Math.random(), item];
+          return [id, { ...req, request_type: 'trip' }];
+        }),
+        ...(Array.isArray(myAssetRequests) ? myAssetRequests : []).map(item => {
+          const [id, req] = Array.isArray(item) ? item : [item.request_id || Math.random(), item];
+          return [id, { ...req, request_type: 'asset' }];
+        }),
+      ]
+      setRequests(allRequests)
 
       // Combine all pending approvals and add request type
       const allApprovals = [
@@ -615,12 +633,47 @@ export default function Dashboard({ user, onLogout }) {
               <div className="requests-table">
                 {requests.map((item) => {
                   const [id, req] = Array.isArray(item) ? item : [item.request_id || Math.random(), item];
+                  const requestType = req.request_type || 'timeoff';
+
                   return (
                     <div key={id} className="request-row">
                       <div className="request-info">
-                        <strong>{new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()}</strong>
-                        <span>{req.timeoff_type.replace('_', ' ')} - {req.working_days_count ?? req.days_count} working days</span>
-                        {req.notes && <p className="notes"><strong>Your notes:</strong> {req.notes}</p>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span className="request-type-badge" style={{ fontSize: '14px', padding: '2px 8px', borderRadius: '12px', background: '#f0f0f0' }}>
+                            {requestType === 'timeoff' && '🏖️ Time Off'}
+                            {requestType === 'trip' && '🌍 Business Trip'}
+                            {requestType === 'asset' && '💻 Equipment'}
+                          </span>
+                        </div>
+
+                        {requestType === 'timeoff' && (
+                          <>
+                            <strong>{new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()}</strong>
+                            <span>{req.timeoff_type.replace('_', ' ')} - {req.working_days_count ?? req.days_count} working days</span>
+                            {req.notes && <p className="notes"><strong>Your notes:</strong> {req.notes}</p>}
+                          </>
+                        )}
+
+                        {requestType === 'trip' && (
+                          <>
+                            <strong>{req.destination}</strong>
+                            <span>{new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()}</span>
+                            <p className="notes"><strong>Purpose:</strong> {req.purpose}</p>
+                            <p className="notes"><strong>Budget:</strong> {req.estimated_budget} {req.currency}</p>
+                            {req.requires_advance_funding && <p className="notes" style={{ color: '#856404', background: '#fff3cd', padding: '4px 8px', borderRadius: '4px' }}>⚠️ Requires advance funding</p>}
+                          </>
+                        )}
+
+                        {requestType === 'asset' && (
+                          <>
+                            <strong>{req.category.replace('_', ' ').toUpperCase()}</strong>
+                            {req.is_misc && req.custom_description && <span>{req.custom_description}</span>}
+                            {!req.is_misc && <span>{req.category.replace('_', ' ')} request</span>}
+                            <p className="notes"><strong>Justification:</strong> {req.business_justification}</p>
+                            {req.is_misc && req.estimated_cost && <p className="notes"><strong>Estimated Cost:</strong> ${req.estimated_cost}</p>}
+                          </>
+                        )}
+
                         {req.status === 'rejected' && req.rejection_reason && (
                           <p className="notes" style={{ color: '#dc3545', background: '#ffe6e6', padding: '8px', borderRadius: '4px', marginTop: '8px' }}>
                             <strong>Rejection reason:</strong> {req.rejection_reason}
@@ -634,7 +687,7 @@ export default function Dashboard({ user, onLogout }) {
                       </div>
                       <div className="request-status">
                         <span className={`status-badge status-${req.status}`}>{req.status.replace('_', ' ')}</span>
-                        {req.status === 'pending' && (
+                        {requestType === 'timeoff' && req.status === 'pending' && (
                           <>
                             <button onClick={() => setEditingRequest({ id, ...req })} className="action-btn" style={{ background: '#667eea' }}>
                               ✏️ Edit
@@ -644,12 +697,12 @@ export default function Dashboard({ user, onLogout }) {
                             </button>
                           </>
                         )}
-                        {req.status === 'approved' && !req.calendar_event_id && (
+                        {requestType === 'timeoff' && req.status === 'approved' && !req.calendar_event_id && (
                           <button onClick={() => handleSyncCalendar(id)} className="action-btn">
                             📅 Sync Calendar
                           </button>
                         )}
-                        {req.status === 'approved' && req.calendar_event_id && !req.autoresponder_enabled && (
+                        {requestType === 'timeoff' && req.status === 'approved' && req.calendar_event_id && !req.autoresponder_enabled && (
                           <button onClick={() => handleEnableAutoresponder(id)} className="action-btn">
                             📧 Enable Auto-reply
                           </button>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { employeeAPI, timeoffAPI } from '../services/api'
+import { employeeAPI, timeoffAPI, tripAPI, assetAPI } from '../services/api'
 import { EmployeeDetailModal } from './EmployeeDetailModal'
 import './Dashboard.css'
 
@@ -19,6 +19,7 @@ export default function Dashboard({ user, onLogout }) {
   const [workingDaysPreview, setWorkingDaysPreview] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
   const [pendingRequestData, setPendingRequestData] = useState(null)
+  const [requestType, setRequestType] = useState('timeoff')
 
   useEffect(() => {
     loadData()
@@ -97,6 +98,65 @@ export default function Dashboard({ user, onLogout }) {
     setShowPreview(false)
     setWorkingDaysPreview(null)
     setPendingRequestData(null)
+  }
+
+  async function handleSubmitTripRequest(e) {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const formData = new FormData(e.target)
+      const requestData = {
+        destination: formData.get('destination'),
+        start_date: formData.get('start_date'),
+        end_date: formData.get('end_date'),
+        purpose: formData.get('purpose'),
+        expected_goal: formData.get('expected_goal'),
+        estimated_budget: parseFloat(formData.get('estimated_budget')),
+        currency: formData.get('currency'),
+        needs_advance_funding: formData.get('needs_advance_funding') === 'on',
+        advance_amount: formData.get('advance_amount') ? parseFloat(formData.get('advance_amount')) : null,
+      }
+
+      await tripAPI.create(requestData)
+      showMessage('Trip request submitted successfully!')
+      await loadData()
+      setView('my-requests')
+      e.target.reset()
+    } catch (error) {
+      showMessage('Failed to create trip request: ' + error.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSubmitAssetRequest(e) {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const formData = new FormData(e.target)
+      const category = formData.get('category')
+      const requestData = {
+        category,
+        business_justification: formData.get('business_justification'),
+      }
+
+      // Add MISC-specific fields if category is misc
+      if (category === 'misc') {
+        requestData.custom_description = formData.get('custom_description')
+        requestData.purchase_url = formData.get('purchase_url')
+        requestData.estimated_cost = parseFloat(formData.get('estimated_cost'))
+      }
+
+      await assetAPI.create(requestData)
+      showMessage('Asset request submitted successfully!')
+      await loadData()
+      setView('my-requests')
+      e.target.reset()
+    } catch (error) {
+      showMessage('Failed to create asset request: ' + error.message, 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleApprove(requestId, isManager) {
@@ -326,8 +386,36 @@ export default function Dashboard({ user, onLogout }) {
 
         {view === 'new-request' && (
           <div className="view-content">
-            <h1>New Time-off Request</h1>
-            {!showPreview ? (
+            <h1>New Request</h1>
+
+            <div className="request-type-selector" style={{ marginBottom: '32px' }}>
+              <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>What would you like to request?</label>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <button
+                  onClick={() => { setRequestType('timeoff'); setShowPreview(false); }}
+                  className={requestType === 'timeoff' ? 'submit-btn' : 'cancel-btn'}
+                  style={{ flex: 1 }}
+                >
+                  ✈️ Time Off
+                </button>
+                <button
+                  onClick={() => { setRequestType('trip'); setShowPreview(false); }}
+                  className={requestType === 'trip' ? 'submit-btn' : 'cancel-btn'}
+                  style={{ flex: 1 }}
+                >
+                  🌍 Business Trip
+                </button>
+                <button
+                  onClick={() => { setRequestType('asset'); setShowPreview(false); }}
+                  className={requestType === 'asset' ? 'submit-btn' : 'cancel-btn'}
+                  style={{ flex: 1 }}
+                >
+                  💻 Equipment/Asset
+                </button>
+              </div>
+            </div>
+
+            {requestType === 'timeoff' && !showPreview && (
               <form onSubmit={handlePreviewRequest} className="request-form">
                 <div className="form-group">
                   <label>Start Date</label>
@@ -353,7 +441,9 @@ export default function Dashboard({ user, onLogout }) {
                   {loading ? 'Calculating...' : 'Preview Request'}
                 </button>
               </form>
-            ) : (
+            )}
+
+            {requestType === 'timeoff' && showPreview && (
               <div className="preview-section">
                 <h2>Request Preview</h2>
                 <div className="preview-info">
@@ -397,6 +487,100 @@ export default function Dashboard({ user, onLogout }) {
                   </button>
                 </div>
               </div>
+            )}
+
+            {requestType === 'trip' && (
+              <form onSubmit={handleSubmitTripRequest} className="request-form">
+                <div className="form-group">
+                  <label>Destination</label>
+                  <input type="text" name="destination" placeholder="e.g., Mexico City" required />
+                </div>
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input type="date" name="start_date" required />
+                </div>
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input type="date" name="end_date" required />
+                </div>
+                <div className="form-group">
+                  <label>Purpose</label>
+                  <input type="text" name="purpose" placeholder="e.g., Client meeting, Conference" required />
+                </div>
+                <div className="form-group">
+                  <label>Expected Goal/Outcome</label>
+                  <textarea name="expected_goal" rows="3" placeholder="e.g., Sign contract with Client X, Attend AWS Summit..." required></textarea>
+                </div>
+                <div className="form-group">
+                  <label>Estimated Budget</label>
+                  <input type="number" name="estimated_budget" step="0.01" placeholder="0.00" required />
+                </div>
+                <div className="form-group">
+                  <label>Currency</label>
+                  <select name="currency" required>
+                    <option value="MXN">MXN (Mexican Peso)</option>
+                    <option value="USD">USD (US Dollar)</option>
+                    <option value="EUR">EUR (Euro)</option>
+                    <option value="COP">COP (Colombian Peso)</option>
+                    <option value="CLP">CLP (Chilean Peso)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>
+                    <input type="checkbox" name="needs_advance_funding" />
+                    {' '}I will need funding before the trip
+                  </label>
+                </div>
+                <div className="form-group">
+                  <label>Advance Amount (if needed)</label>
+                  <input type="number" name="advance_amount" step="0.01" placeholder="0.00" />
+                </div>
+                <button type="submit" disabled={loading} className="submit-btn">
+                  {loading ? 'Submitting...' : 'Submit Trip Request'}
+                </button>
+              </form>
+            )}
+
+            {requestType === 'asset' && (
+              <form onSubmit={handleSubmitAssetRequest} className="request-form">
+                <div className="form-group">
+                  <label>Category</label>
+                  <select name="category" required onChange={(e) => {
+                    const miscFields = document.querySelectorAll('.misc-only');
+                    miscFields.forEach(field => {
+                      field.style.display = e.target.value === 'misc' ? 'block' : 'none';
+                    });
+                  }}>
+                    <option value="">Select category...</option>
+                    <option value="keyboard">Keyboard</option>
+                    <option value="mouse">Mouse</option>
+                    <option value="laptop">Laptop</option>
+                    <option value="microphone">Microphone</option>
+                    <option value="headphones">Headphones (for video conferences)</option>
+                    <option value="license">Software License</option>
+                    <option value="misc">Miscellaneous (Other)</option>
+                  </select>
+                </div>
+                <div className="form-group misc-only" style={{ display: 'none' }}>
+                  <label>Item Description</label>
+                  <input type="text" name="custom_description" placeholder="Describe the item" />
+                </div>
+                <div className="form-group misc-only" style={{ display: 'none' }}>
+                  <label>Purchase URL</label>
+                  <input type="url" name="purchase_url" placeholder="https://example.com/product" />
+                </div>
+                <div className="form-group misc-only" style={{ display: 'none' }}>
+                  <label>Estimated Cost</label>
+                  <input type="number" name="estimated_cost" step="0.01" placeholder="0.00" />
+                </div>
+                <div className="form-group">
+                  <label>Business Justification</label>
+                  <textarea name="business_justification" rows="4" placeholder="Why do you need this asset? How will it help your work?" required></textarea>
+                </div>
+                <button type="submit" disabled={loading} className="submit-btn">
+                  {loading ? 'Submitting...' : 'Submit Asset Request'}
+                </button>
+              </form>
             )}
           </div>
         )}

@@ -93,3 +93,60 @@ export const timeoffAPI = {
     body: JSON.stringify(data),
   }),
 };
+
+export const tripAPI = {
+  create: (data) => fetchAPI('/api/trips/requests', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  getMy: () => fetchAPI('/api/trips/requests'),
+  getOne: (id) => fetchAPI(`/api/trips/requests/${id}`),
+  getPendingApprovals: () => fetchAPI('/api/trips/pending-approval'),
+  approveManager: (id) => fetchAPI(`/api/trips/requests/${id}/approve-manager`, {
+    method: 'POST',
+  }),
+  approveAdmin: (id) => fetchAPI(`/api/trips/requests/${id}/approve-admin`, {
+    method: 'POST',
+  }),
+  reject: (id, reason) => fetchAPI(`/api/trips/requests/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  }),
+  submitJustification: (id, data) => fetchAPI(`/api/trips/requests/${id}/submit-justification`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  reviewJustification: (id, approved, feedback, totalApproved) => fetchAPI(`/api/trips/requests/${id}/review-justification`, {
+    method: 'POST',
+    body: JSON.stringify({ approved, feedback, total_approved: totalApproved }),
+  }),
+};
+
+export const assetAPI = {
+  create: (data) => fetchAPI('/api/assets/requests', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  getMy: () => fetchAPI('/api/assets/requests'),
+  getOne: (id) => fetchAPI(`/api/assets/requests/${id}`),
+  getPendingApprovals: () => fetchAPI('/api/assets/pending-approval'),
+  approveManager: (id) => fetchAPI(`/api/assets/requests/${id}/approve-manager`, {
+    method: 'POST',
+  }),
+  approveAdmin: (id) => fetchAPI(`/api/assets/requests/${id}/approve-admin`, {
+    method: 'POST',
+  }),
+  reject: (id, reason) => fetchAPI(`/api/assets/requests/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  }),
+  getInventory: (employeeEmail = null) => fetchAPI(`/api/assets/inventory${employeeEmail ? `?employee_email=${employeeEmail}` : ''}`),
+  updateAsset: (id, data) => fetchAPI(`/api/assets/inventory/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  addAssetManually: (data) => fetchAPI('/api/assets/inventory', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+};

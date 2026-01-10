@@ -145,6 +145,50 @@ def get_trip_request(request_id):
     return jsonify(response), 200
 
 
+@trip_bp.route('/requests/employee/<email>', methods=['GET'])
+@login_required
+def get_employee_trip_history(email):
+    """Get trip history for a specific employee (manager or admin only)"""
+    db = FirestoreService()
+    current_email = get_current_user_email()
+
+    # Get the employee whose history is being viewed
+    employee = db.get_employee(email)
+    if not employee:
+        return jsonify({'error': 'Employee not found'}), 404
+
+    # Check permissions: must be admin OR manager of this employee
+    is_user_admin = is_admin(current_email)
+    is_manager = employee.manager_email == current_email
+
+    if not (is_user_admin or is_manager):
+        return jsonify({'error': 'Permission denied. You can only view trip history for your direct reports.'}), 403
+
+    # Get year filter (optional)
+    year = request.args.get('year', type=int)
+
+    # Fetch trip requests for this employee
+    requests = db.get_employee_trip_requests(email, year)
+
+    # Log this access for audit trail
+    log_action(
+        user_email=current_email,
+        action=AuditAction.EMPLOYEE_VIEW,
+        resource_type='employee_trip_history',
+        resource_id=email,
+        details={
+            'year': year,
+            'is_manager_view': is_manager and not is_user_admin,
+            'request_count': len(requests)
+        }
+    )
+
+    return jsonify([
+        {**req.to_dict(), 'request_id': rid}
+        for rid, req in requests
+    ]), 200
+
+
 @trip_bp.route('/requests/<request_id>/approve-manager', methods=['POST'])
 @login_required
 def approve_trip_manager(request_id):

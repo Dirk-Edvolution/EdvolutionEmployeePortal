@@ -101,6 +101,7 @@ export const tripAPI = {
   }),
   getMy: () => fetchAPI('/api/trips/requests'),
   getOne: (id) => fetchAPI(`/api/trips/requests/${id}`),
+  getEmployeeHistory: (email, year) => fetchAPI(`/api/trips/requests/employee/${email}${year ? `?year=${year}` : ''}`),
   getPendingApprovals: () => fetchAPI('/api/trips/pending-approval'),
   approveManager: (id) => fetchAPI(`/api/trips/requests/${id}/approve-manager`, {
     method: 'POST',
@@ -129,6 +130,7 @@ export const assetAPI = {
   }),
   getMy: () => fetchAPI('/api/assets/requests'),
   getOne: (id) => fetchAPI(`/api/assets/requests/${id}`),
+  getEmployeeHistory: (email, year) => fetchAPI(`/api/assets/requests/employee/${email}${year ? `?year=${year}` : ''}`),
   getPendingApprovals: () => fetchAPI('/api/assets/pending-approval'),
   approveManager: (id) => fetchAPI(`/api/assets/requests/${id}/approve-manager`, {
     method: 'POST',

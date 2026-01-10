@@ -55,31 +55,15 @@ export function EmployeeDetailModal({ employee, onClose }) {
       // Fetch all request types in parallel
       const [timeoffData, tripData, assetData] = await Promise.all([
         timeoffAPI.getEmployeeHistory(employee.email, currentYear).catch(() => []),
-        tripAPI.getMy().catch(() => []), // Note: tripAPI doesn't have getEmployeeHistory, so filter by email
-        assetAPI.getMy().catch(() => []) // Note: assetAPI doesn't have getEmployeeHistory, so filter by email
+        tripAPI.getEmployeeHistory(employee.email, currentYear).catch(() => []),
+        assetAPI.getEmployeeHistory(employee.email, currentYear).catch(() => [])
       ]);
 
       // Combine and tag all requests with type
       const allRequests = [
         ...(Array.isArray(timeoffData) ? timeoffData : []).map(req => ({ ...req, request_type: 'timeoff' })),
-        ...(Array.isArray(tripData) ? tripData : [])
-          .filter(item => {
-            const req = Array.isArray(item) ? item[1] : item;
-            return req.employee_email === employee.email;
-          })
-          .map(item => {
-            const [id, req] = Array.isArray(item) ? item : [item.request_id, item];
-            return { ...req, request_id: id, request_type: 'trip' };
-          }),
-        ...(Array.isArray(assetData) ? assetData : [])
-          .filter(item => {
-            const req = Array.isArray(item) ? item[1] : item;
-            return req.employee_email === employee.email;
-          })
-          .map(item => {
-            const [id, req] = Array.isArray(item) ? item : [item.request_id, item];
-            return { ...req, request_id: id, request_type: 'asset' };
-          }),
+        ...(Array.isArray(tripData) ? tripData : []).map(req => ({ ...req, request_type: 'trip' })),
+        ...(Array.isArray(assetData) ? assetData : []).map(req => ({ ...req, request_type: 'asset' })),
       ];
 
       // Sort by date (most recent first)

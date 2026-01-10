@@ -268,11 +268,19 @@ class FirestoreService:
         request.updated_at = datetime.utcnow()
         self.trip_requests_ref.document(request_id).update(request.to_dict())
 
-    def get_employee_trip_requests(self, email: str) -> List[tuple[str, TripRequest]]:
-        """Get all trip requests for an employee"""
+    def get_employee_trip_requests(
+        self, email: str, year: Optional[int] = None
+    ) -> List[tuple[str, TripRequest]]:
+        """Get all trip requests for an employee, optionally filtered by year"""
         query = self.trip_requests_ref.where('employee_email', '==', email)
         docs = query.stream()
         requests = [(doc.id, TripRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+        if year:
+            requests = [
+                (rid, req) for rid, req in requests
+                if req.start_date.year == year or req.end_date.year == year
+            ]
 
         # Sort by created_at, most recent first
         def get_sort_key(item):
@@ -364,11 +372,19 @@ class FirestoreService:
         request.updated_at = datetime.utcnow()
         self.asset_requests_ref.document(request_id).update(request.to_dict())
 
-    def get_employee_asset_requests(self, email: str) -> List[tuple[str, AssetRequest]]:
-        """Get all asset requests for an employee"""
+    def get_employee_asset_requests(
+        self, email: str, year: Optional[int] = None
+    ) -> List[tuple[str, AssetRequest]]:
+        """Get all asset requests for an employee, optionally filtered by year"""
         query = self.asset_requests_ref.where('employee_email', '==', email)
         docs = query.stream()
         requests = [(doc.id, AssetRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+        if year:
+            requests = [
+                (rid, req) for rid, req in requests
+                if req.created_at and req.created_at.year == year
+            ]
 
         # Sort by created_at, most recent first
         def get_sort_key(item):

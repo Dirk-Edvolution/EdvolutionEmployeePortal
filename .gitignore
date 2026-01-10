@@ -27,6 +27,8 @@ env/
 .env
 *.env
 !.env.example
+env.yaml
+.env.production
 
 # IDEs
 .vscode/

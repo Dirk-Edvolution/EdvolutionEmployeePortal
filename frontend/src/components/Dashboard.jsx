@@ -31,14 +31,32 @@ export default function Dashboard({ user, onLogout }) {
 
   async function loadData() {
     try {
-      const [summary, myRequests, approvals] = await Promise.all([
+      const [summary, myRequests, timeoffApprovals, tripApprovals, assetApprovals] = await Promise.all([
         timeoffAPI.getVacationSummary().catch(() => null),
         timeoffAPI.getMy().catch(() => []),
         timeoffAPI.getPendingApprovals().catch(() => []),
+        tripAPI.getPendingApprovals().catch(() => []),
+        assetAPI.getPendingApprovals().catch(() => []),
       ])
       setVacationSummary(summary)
       setRequests(Array.isArray(myRequests) ? myRequests : [])
-      setPendingApprovals(Array.isArray(approvals) ? approvals : [])
+
+      // Combine all pending approvals and add request type
+      const allApprovals = [
+        ...(Array.isArray(timeoffApprovals) ? timeoffApprovals : []).map(item => ({
+          ...item,
+          request_type: 'timeoff'
+        })),
+        ...(Array.isArray(tripApprovals) ? tripApprovals : []).map(item => ({
+          ...item,
+          request_type: 'trip'
+        })),
+        ...(Array.isArray(assetApprovals) ? assetApprovals : []).map(item => ({
+          ...item,
+          request_type: 'asset'
+        })),
+      ]
+      setPendingApprovals(allApprovals)
     } catch (error) {
       showMessage('Failed to load data: ' + error.message, 'error')
     }
@@ -159,14 +177,16 @@ export default function Dashboard({ user, onLogout }) {
     }
   }
 
-  async function handleApprove(requestId, isManager) {
+  async function handleApprove(requestId, isManager, requestType = 'timeoff') {
     setLoading(true)
     try {
+      const api = requestType === 'trip' ? tripAPI : requestType === 'asset' ? assetAPI : timeoffAPI
+
       if (isManager) {
-        await timeoffAPI.approveManager(requestId)
+        await api.approveManager(requestId)
         showMessage('Approved as manager! Waiting for admin approval.')
       } else {
-        await timeoffAPI.approveAdmin(requestId)
+        await api.approveAdmin(requestId)
         showMessage('Request fully approved!')
       }
       await loadData()
@@ -177,13 +197,14 @@ export default function Dashboard({ user, onLogout }) {
     }
   }
 
-  async function handleReject(requestId) {
+  async function handleReject(requestId, requestType = 'timeoff') {
     const reason = prompt('Enter rejection reason:')
     if (!reason) return
 
     setLoading(true)
     try {
-      await timeoffAPI.reject(requestId, reason)
+      const api = requestType === 'trip' ? tripAPI : requestType === 'asset' ? assetAPI : timeoffAPI
+      await api.reject(requestId, reason)
       showMessage('Request rejected')
       await loadData()
     } catch (error) {
@@ -652,29 +673,59 @@ export default function Dashboard({ user, onLogout }) {
                 {pendingApprovals.map((item) => {
                   const id = item.request_id || item[0];
                   const req = item.request_id ? item : item[1];
+                  const requestType = req.request_type || 'timeoff';
+
                   return (
                     <div key={id} className="approval-card">
                       <div className="approval-header">
                         <strong>{req.employee_email}</strong>
                         <span className={`status-badge status-${req.status}`}>{req.status.replace('_', ' ')}</span>
+                        <span className="request-type-badge">
+                          {requestType === 'timeoff' && '🏖️ Time Off'}
+                          {requestType === 'trip' && '🌍 Business Trip'}
+                          {requestType === 'asset' && '💻 Equipment'}
+                        </span>
                       </div>
                       <div className="approval-details">
-                        <p><strong>Dates:</strong> {new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()} ({req.working_days_count ?? req.days_count} working days)</p>
-                        <p><strong>Type:</strong> {req.timeoff_type.replace('_', ' ')}</p>
-                        {req.notes && <p><strong>Notes:</strong> {req.notes}</p>}
+                        {requestType === 'timeoff' && (
+                          <>
+                            <p><strong>Dates:</strong> {new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()} ({req.working_days_count ?? req.days_count} working days)</p>
+                            <p><strong>Type:</strong> {req.timeoff_type.replace('_', ' ')}</p>
+                            {req.notes && <p><strong>Notes:</strong> {req.notes}</p>}
+                          </>
+                        )}
+                        {requestType === 'trip' && (
+                          <>
+                            <p><strong>Destination:</strong> {req.destination}</p>
+                            <p><strong>Dates:</strong> {new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()}</p>
+                            <p><strong>Purpose:</strong> {req.purpose}</p>
+                            <p><strong>Expected Goal:</strong> {req.expected_goal}</p>
+                            <p><strong>Budget:</strong> {req.estimated_budget} {req.currency}</p>
+                            {req.requires_advance_funding && <p><strong>⚠️ Requires advance funding</strong></p>}
+                          </>
+                        )}
+                        {requestType === 'asset' && (
+                          <>
+                            <p><strong>Category:</strong> {req.category.replace('_', ' ').toUpperCase()}</p>
+                            {req.is_misc && req.custom_description && <p><strong>Description:</strong> {req.custom_description}</p>}
+                            {req.is_misc && req.purchase_url && <p><strong>URL:</strong> <a href={req.purchase_url} target="_blank" rel="noopener noreferrer">{req.purchase_url}</a></p>}
+                            {req.is_misc && req.estimated_cost && <p><strong>Estimated Cost:</strong> ${req.estimated_cost}</p>}
+                            <p><strong>Justification:</strong> {req.business_justification}</p>
+                          </>
+                        )}
                       </div>
                       <div className="approval-actions">
                         {req.status === 'pending' && (
-                          <button onClick={() => handleApprove(id, true)} className="approve-btn" disabled={loading}>
+                          <button onClick={() => handleApprove(id, true, requestType)} className="approve-btn" disabled={loading}>
                             ✅ Approve (Manager)
                           </button>
                         )}
                         {req.status === 'manager_approved' && user.is_admin && (
-                          <button onClick={() => handleApprove(id, false)} className="approve-btn" disabled={loading}>
+                          <button onClick={() => handleApprove(id, false, requestType)} className="approve-btn" disabled={loading}>
                             ✅ Approve (Admin)
                           </button>
                         )}
-                        <button onClick={() => handleReject(id)} className="reject-btn" disabled={loading}>
+                        <button onClick={() => handleReject(id, requestType)} className="reject-btn" disabled={loading}>
                           ❌ Reject
                         </button>
                       </div>

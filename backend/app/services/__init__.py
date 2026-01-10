@@ -6,5 +6,6 @@ from .notification_service import NotificationService
 from .tasks_service import TasksService
 from .chat_ai_service import ChatAIService
 from .holiday_service import HolidayService
+from .drive_service import DriveService
 
-__all__ = ['FirestoreService', 'WorkspaceService', 'CalendarService', 'GmailService', 'NotificationService', 'TasksService', 'ChatAIService', 'HolidayService']
+__all__ = ['FirestoreService', 'WorkspaceService', 'CalendarService', 'GmailService', 'NotificationService', 'TasksService', 'ChatAIService', 'HolidayService', 'DriveService']

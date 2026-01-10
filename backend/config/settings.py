@@ -32,6 +32,8 @@ OAUTH_SCOPES = [
     'https://www.googleapis.com/auth/gmail.send',  # For sending notification emails
     'https://www.googleapis.com/auth/chat.messages',  # For Google Chat notifications
     'https://www.googleapis.com/auth/tasks',  # For Google Tasks integration
+    'https://www.googleapis.com/auth/drive.file',  # For Google Drive file/folder creation (trip expenses)
+    'https://www.googleapis.com/auth/spreadsheets',  # For Google Sheets creation (expense reports)
 ]
 
 # Google Workspace Configuration
@@ -53,6 +55,11 @@ ADMIN_USERS = [email.strip() for email in admin_users_str.split(separator) if em
 EMPLOYEES_COLLECTION = os.getenv('EMPLOYEES_COLLECTION', 'employees')
 TIMEOFF_REQUESTS_COLLECTION = os.getenv('TIMEOFF_REQUESTS_COLLECTION', 'timeoff_requests')
 APPROVALS_COLLECTION = os.getenv('APPROVALS_COLLECTION', 'approvals')
+TRIP_REQUESTS_COLLECTION = os.getenv('TRIP_REQUESTS_COLLECTION', 'trip_requests')
+TRIP_JUSTIFICATIONS_COLLECTION = os.getenv('TRIP_JUSTIFICATIONS_COLLECTION', 'trip_justifications')
+ASSET_REQUESTS_COLLECTION = os.getenv('ASSET_REQUESTS_COLLECTION', 'asset_requests')
+EMPLOYEE_ASSETS_COLLECTION = os.getenv('EMPLOYEE_ASSETS_COLLECTION', 'employee_assets')
+ASSET_AUDIT_LOGS_COLLECTION = os.getenv('ASSET_AUDIT_LOGS_COLLECTION', 'asset_audit_logs')
 
 # Organizational Units for Employee Management
 EMPLOYEE_OU = os.getenv('EMPLOYEE_OU', '/Employees')
@@ -69,8 +76,21 @@ AVAILABLE_OUS = {
 # Time-off types
 TIMEOFF_TYPES = ['vacation', 'sick_leave', 'day_off']
 
+# Asset categories (for equipment requests)
+ASSET_CATEGORIES = ['keyboard', 'mouse', 'laptop', 'microphone', 'headphones', 'license', 'misc']
+
+# Supported currencies for trip expenses
+TRIP_CURRENCIES = ['MXN', 'USD', 'EUR', 'COP', 'CLP']
+
 # Approval status
 APPROVAL_STATUS = ['pending', 'manager_approved', 'approved', 'rejected']
+
+# Trip-specific statuses (extends approval workflow)
+TRIP_STATUS = ['pending', 'manager_approved', 'approved', 'rejected', 'in_progress',
+               'justification_submitted', 'justification_rejected', 'completed']
+
+# Asset status (inventory tracking)
+ASSET_STATUS = ['active', 'returned', 'damaged', 'lost']
 
 # Notification Configuration
 ENABLE_CHAT_NOTIFICATIONS = os.getenv('ENABLE_CHAT_NOTIFICATIONS', 'true').lower() == 'true'

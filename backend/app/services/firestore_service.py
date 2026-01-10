@@ -8,8 +8,22 @@ from backend.config.settings import (
     GCP_PROJECT_ID,
     EMPLOYEES_COLLECTION,
     TIMEOFF_REQUESTS_COLLECTION,
+    TRIP_REQUESTS_COLLECTION,
+    TRIP_JUSTIFICATIONS_COLLECTION,
+    ASSET_REQUESTS_COLLECTION,
+    EMPLOYEE_ASSETS_COLLECTION,
+    ASSET_AUDIT_LOGS_COLLECTION,
 )
-from backend.app.models import Employee, TimeOffRequest, AuditLog
+from backend.app.models import (
+    Employee,
+    TimeOffRequest,
+    AuditLog,
+    TripRequest,
+    TripJustification,
+    AssetRequest,
+    EmployeeAsset,
+    AssetAuditLog,
+)
 
 
 class FirestoreService:
@@ -20,6 +34,11 @@ class FirestoreService:
         self.employees_ref = self.db.collection(EMPLOYEES_COLLECTION)
         self.timeoff_ref = self.db.collection(TIMEOFF_REQUESTS_COLLECTION)
         self.audit_log_ref = self.db.collection('audit_logs')
+        self.trip_requests_ref = self.db.collection(TRIP_REQUESTS_COLLECTION)
+        self.trip_justifications_ref = self.db.collection(TRIP_JUSTIFICATIONS_COLLECTION)
+        self.asset_requests_ref = self.db.collection(ASSET_REQUESTS_COLLECTION)
+        self.employee_assets_ref = self.db.collection(EMPLOYEE_ASSETS_COLLECTION)
+        self.asset_audit_logs_ref = self.db.collection(ASSET_AUDIT_LOGS_COLLECTION)
 
     # Employee operations
     def get_employee(self, email: str) -> Optional[Employee]:
@@ -229,3 +248,215 @@ class FirestoreService:
             limit=1000
         )
         return [log for _, log in logs]
+
+    # Trip request operations
+    def create_trip_request(self, request: TripRequest) -> str:
+        """Create new trip request and return its ID"""
+        doc_ref = self.trip_requests_ref.document()
+        doc_ref.set(request.to_dict())
+        return doc_ref.id
+
+    def get_trip_request(self, request_id: str) -> Optional[TripRequest]:
+        """Get trip request by ID"""
+        doc = self.trip_requests_ref.document(request_id).get()
+        if doc.exists:
+            return TripRequest.from_dict(request_id, doc.to_dict())
+        return None
+
+    def update_trip_request(self, request_id: str, request: TripRequest) -> None:
+        """Update trip request"""
+        request.updated_at = datetime.utcnow()
+        self.trip_requests_ref.document(request_id).update(request.to_dict())
+
+    def get_employee_trip_requests(self, email: str) -> List[tuple[str, TripRequest]]:
+        """Get all trip requests for an employee"""
+        query = self.trip_requests_ref.where('employee_email', '==', email)
+        docs = query.stream()
+        requests = [(doc.id, TripRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+        # Sort by created_at, most recent first
+        def get_sort_key(item):
+            created_at = item[1].created_at
+            if created_at is None:
+                return datetime.min.replace(tzinfo=None)
+            if isinstance(created_at, str):
+                try:
+                    dt = datetime.fromisoformat(created_at)
+                    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+                except:
+                    return datetime.min.replace(tzinfo=None)
+            try:
+                if hasattr(created_at, 'tzinfo'):
+                    return created_at.replace(tzinfo=None)
+                else:
+                    return datetime.min.replace(tzinfo=None)
+            except:
+                return datetime.min.replace(tzinfo=None)
+
+        return sorted(requests, key=get_sort_key, reverse=True)
+
+    def get_pending_trip_requests_for_manager(self, manager_email: str) -> List[tuple[str, TripRequest]]:
+        """Get pending trip requests for employees managed by this manager"""
+        query = self.trip_requests_ref.where('manager_email', '==', manager_email).where('status', '==', 'pending')
+        docs = query.stream()
+        return [(doc.id, TripRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    def get_pending_trip_requests_for_admin(self) -> List[tuple[str, TripRequest]]:
+        """Get trip requests pending admin approval"""
+        query = self.trip_requests_ref.where('status', '==', 'manager_approved')
+        docs = query.stream()
+        return [(doc.id, TripRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    def get_trips_pending_justification_review(self) -> List[tuple[str, TripRequest]]:
+        """Get trips with justification submitted and pending admin review"""
+        query = self.trip_requests_ref.where('status', '==', 'justification_submitted')
+        docs = query.stream()
+        return [(doc.id, TripRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    # Trip justification operations
+    def create_trip_justification(self, justification: TripJustification) -> str:
+        """Create new trip justification and return its ID"""
+        doc_ref = self.trip_justifications_ref.document()
+        doc_ref.set(justification.to_dict())
+        return doc_ref.id
+
+    def get_trip_justification(self, justification_id: str) -> Optional[TripJustification]:
+        """Get trip justification by ID"""
+        doc = self.trip_justifications_ref.document(justification_id).get()
+        if doc.exists:
+            return TripJustification.from_dict(justification_id, doc.to_dict())
+        return None
+
+    def update_trip_justification(self, justification_id: str, justification: TripJustification) -> None:
+        """Update trip justification"""
+        self.trip_justifications_ref.document(justification_id).update(justification.to_dict())
+
+    def get_trip_justifications(self, trip_request_id: str) -> List[tuple[str, TripJustification]]:
+        """Get all justifications for a trip request"""
+        query = self.trip_justifications_ref.where('trip_request_id', '==', trip_request_id)
+        docs = query.stream()
+        justifications = [(doc.id, TripJustification.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+        # Sort by submission number
+        return sorted(justifications, key=lambda x: x[1].submission_number, reverse=True)
+
+    def get_latest_trip_justification(self, trip_request_id: str) -> Optional[tuple[str, TripJustification]]:
+        """Get the most recent justification for a trip request"""
+        justifications = self.get_trip_justifications(trip_request_id)
+        return justifications[0] if justifications else None
+
+    # Asset request operations
+    def create_asset_request(self, request: AssetRequest) -> str:
+        """Create new asset request and return its ID"""
+        doc_ref = self.asset_requests_ref.document()
+        doc_ref.set(request.to_dict())
+        return doc_ref.id
+
+    def get_asset_request(self, request_id: str) -> Optional[AssetRequest]:
+        """Get asset request by ID"""
+        doc = self.asset_requests_ref.document(request_id).get()
+        if doc.exists:
+            return AssetRequest.from_dict(request_id, doc.to_dict())
+        return None
+
+    def update_asset_request(self, request_id: str, request: AssetRequest) -> None:
+        """Update asset request"""
+        request.updated_at = datetime.utcnow()
+        self.asset_requests_ref.document(request_id).update(request.to_dict())
+
+    def get_employee_asset_requests(self, email: str) -> List[tuple[str, AssetRequest]]:
+        """Get all asset requests for an employee"""
+        query = self.asset_requests_ref.where('employee_email', '==', email)
+        docs = query.stream()
+        requests = [(doc.id, AssetRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+        # Sort by created_at, most recent first
+        def get_sort_key(item):
+            created_at = item[1].created_at
+            if created_at is None:
+                return datetime.min.replace(tzinfo=None)
+            if isinstance(created_at, str):
+                try:
+                    dt = datetime.fromisoformat(created_at)
+                    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+                except:
+                    return datetime.min.replace(tzinfo=None)
+            try:
+                if hasattr(created_at, 'tzinfo'):
+                    return created_at.replace(tzinfo=None)
+                else:
+                    return datetime.min.replace(tzinfo=None)
+            except:
+                return datetime.min.replace(tzinfo=None)
+
+        return sorted(requests, key=get_sort_key, reverse=True)
+
+    def get_pending_asset_requests_for_manager(self, manager_email: str) -> List[tuple[str, AssetRequest]]:
+        """Get pending asset requests for employees managed by this manager"""
+        query = self.asset_requests_ref.where('manager_email', '==', manager_email).where('status', '==', 'pending')
+        docs = query.stream()
+        return [(doc.id, AssetRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    def get_pending_asset_requests_for_admin(self) -> List[tuple[str, AssetRequest]]:
+        """Get asset requests pending admin approval"""
+        query = self.asset_requests_ref.where('status', '==', 'manager_approved')
+        docs = query.stream()
+        return [(doc.id, AssetRequest.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    # Employee asset inventory operations
+    def create_employee_asset(self, asset: EmployeeAsset) -> str:
+        """Create new employee asset and return its ID"""
+        doc_ref = self.employee_assets_ref.document()
+        doc_ref.set(asset.to_dict())
+        return doc_ref.id
+
+    def get_employee_asset(self, asset_id: str) -> Optional[EmployeeAsset]:
+        """Get employee asset by ID"""
+        doc = self.employee_assets_ref.document(asset_id).get()
+        if doc.exists:
+            return EmployeeAsset.from_dict(asset_id, doc.to_dict())
+        return None
+
+    def update_employee_asset(self, asset_id: str, asset: EmployeeAsset) -> None:
+        """Update employee asset"""
+        asset.updated_at = datetime.utcnow()
+        self.employee_assets_ref.document(asset_id).update(asset.to_dict())
+
+    def get_employee_assets(self, email: str, active_only: bool = True) -> List[tuple[str, EmployeeAsset]]:
+        """Get all assets held by an employee"""
+        query = self.employee_assets_ref.where('employee_email', '==', email)
+
+        if active_only:
+            query = query.where('status', '==', 'active')
+
+        docs = query.stream()
+        return [(doc.id, EmployeeAsset.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    def get_all_employee_assets(self, active_only: bool = True) -> List[tuple[str, EmployeeAsset]]:
+        """Get all assets in the system"""
+        query = self.employee_assets_ref
+
+        if active_only:
+            query = query.where('status', '==', 'active')
+
+        docs = query.stream()
+        return [(doc.id, EmployeeAsset.from_dict(doc.id, doc.to_dict())) for doc in docs]
+
+    # Asset audit log operations
+    def create_asset_audit_log(self, audit_log: AssetAuditLog) -> str:
+        """Create new asset audit log entry"""
+        doc_ref = self.asset_audit_logs_ref.document()
+        doc_ref.set(audit_log.to_dict())
+        return doc_ref.id
+
+    def get_asset_audit_logs(self, asset_id: str, limit: int = 100) -> List[tuple[str, AssetAuditLog]]:
+        """Get audit logs for a specific asset"""
+        query = self.asset_audit_logs_ref.where('asset_id', '==', asset_id)
+        query = query.order_by('changed_at', direction=firestore.Query.DESCENDING)
+        query = query.limit(limit)
+
+        logs = []
+        for doc in query.stream():
+            logs.append((doc.id, AssetAuditLog.from_dict(doc.id, doc.to_dict())))
+
+        return logs

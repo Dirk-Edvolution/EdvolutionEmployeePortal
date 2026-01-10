@@ -72,7 +72,7 @@ def create_asset_request():
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.ASSET_CREATE if hasattr(AuditAction, 'ASSET_CREATE') else 'ASSET_CREATE',
+        action=AuditAction.ASSET_CREATE,
         resource_type='asset_request',
         resource_id=request_id,
         details=f'Asset request: {asset_request.display_name}'
@@ -146,7 +146,7 @@ def approve_asset_manager(request_id):
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.ASSET_APPROVE_MANAGER if hasattr(AuditAction, 'ASSET_APPROVE_MANAGER') else 'ASSET_APPROVE_MANAGER',
+        action=AuditAction.ASSET_APPROVE_MANAGER,
         resource_type='asset_request',
         resource_id=request_id,
         details=f'Manager approved: {asset_request.display_name}'
@@ -200,7 +200,7 @@ def approve_asset_admin(request_id):
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.ASSET_APPROVE_ADMIN if hasattr(AuditAction, 'ASSET_APPROVE_ADMIN') else 'ASSET_APPROVE_ADMIN',
+        action=AuditAction.ASSET_APPROVE_ADMIN,
         resource_type='asset_request',
         resource_id=request_id,
         details=f'Admin approved: {asset_request.display_name}, created asset {asset_id}'
@@ -244,7 +244,7 @@ def reject_asset(request_id):
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.ASSET_REJECT if hasattr(AuditAction, 'ASSET_REJECT') else 'ASSET_REJECT',
+        action=AuditAction.ASSET_REJECT,
         resource_type='asset_request',
         resource_id=request_id,
         details=f'Rejected: {reason}'

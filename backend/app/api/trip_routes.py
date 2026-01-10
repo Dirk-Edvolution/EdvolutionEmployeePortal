@@ -75,7 +75,7 @@ def create_trip_request():
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.TRIP_CREATE if hasattr(AuditAction, 'TRIP_CREATE') else 'TRIP_CREATE',
+        action=AuditAction.TRIP_CREATE,
         resource_type='trip_request',
         resource_id=request_id,
         details=f'Trip to {data["destination"]}'
@@ -167,7 +167,7 @@ def approve_trip_manager(request_id):
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.TRIP_APPROVE_MANAGER if hasattr(AuditAction, 'TRIP_APPROVE_MANAGER') else 'TRIP_APPROVE_MANAGER',
+        action=AuditAction.TRIP_APPROVE_MANAGER,
         resource_type='trip_request',
         resource_id=request_id,
         details=f'Manager approved trip to {trip_request.destination}'
@@ -270,7 +270,7 @@ def approve_trip_admin(request_id):
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.TRIP_APPROVE_ADMIN if hasattr(AuditAction, 'TRIP_APPROVE_ADMIN') else 'TRIP_APPROVE_ADMIN',
+        action=AuditAction.TRIP_APPROVE_ADMIN,
         resource_type='trip_request',
         resource_id=request_id,
         details=f'Admin approved trip to {trip_request.destination}'
@@ -322,7 +322,7 @@ def reject_trip(request_id):
     # Log action
     log_action(
         user_email=current_email,
-        action=AuditAction.TRIP_REJECT if hasattr(AuditAction, 'TRIP_REJECT') else 'TRIP_REJECT',
+        action=AuditAction.TRIP_REJECT,
         resource_type='trip_request',
         resource_id=request_id,
         details=f'Rejected: {reason}'

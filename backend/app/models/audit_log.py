@@ -27,6 +27,23 @@ class AuditAction(str, Enum):
     TIMEOFF_APPROVE_ADMIN = 'timeoff_approve_admin'
     TIMEOFF_REJECT = 'timeoff_reject'
 
+    # Trip Requests
+    TRIP_CREATE = 'trip_create'
+    TRIP_APPROVE_MANAGER = 'trip_approve_manager'
+    TRIP_APPROVE_ADMIN = 'trip_approve_admin'
+    TRIP_REJECT = 'trip_reject'
+    TRIP_SUBMIT_JUSTIFICATION = 'trip_submit_justification'
+    TRIP_APPROVE_JUSTIFICATION = 'trip_approve_justification'
+    TRIP_REJECT_JUSTIFICATION = 'trip_reject_justification'
+
+    # Asset Requests
+    ASSET_CREATE = 'asset_create'
+    ASSET_APPROVE_MANAGER = 'asset_approve_manager'
+    ASSET_APPROVE_ADMIN = 'asset_approve_admin'
+    ASSET_REJECT = 'asset_reject'
+    ASSET_UPDATE = 'asset_update'
+    ASSET_TRANSFER = 'asset_transfer'
+
     # Evaluations
     EVALUATION_CREATE = 'evaluation_create'
 

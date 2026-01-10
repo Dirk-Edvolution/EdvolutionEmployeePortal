@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { employeeAPI, timeoffAPI } from '../services/api';
+import { employeeAPI, timeoffAPI, tripAPI, assetAPI } from '../services/api';
 
 export function EmployeeDetailModal({ employee, onClose }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [employeeDetail, setEmployeeDetail] = useState(null);
-  const [timeoffHistory, setTimeoffHistory] = useState([]);
+  const [requestsHistory, setRequestsHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -29,8 +29,8 @@ export function EmployeeDetailModal({ employee, onClose }) {
   }, [employee]);
 
   useEffect(() => {
-    if (activeTab === 'timeoff' && employee) {
-      fetchTimeoffHistory();
+    if (activeTab === 'requests' && employee) {
+      fetchRequestsHistory();
     }
   }, [activeTab, employee]);
 
@@ -47,15 +47,52 @@ export function EmployeeDetailModal({ employee, onClose }) {
     }
   };
 
-  const fetchTimeoffHistory = async () => {
+  const fetchRequestsHistory = async () => {
     try {
       setLoading(true);
       const currentYear = new Date().getFullYear();
-      const data = await timeoffAPI.getEmployeeHistory(employee.email, currentYear);
-      setTimeoffHistory(data);
+
+      // Fetch all request types in parallel
+      const [timeoffData, tripData, assetData] = await Promise.all([
+        timeoffAPI.getEmployeeHistory(employee.email, currentYear).catch(() => []),
+        tripAPI.getMy().catch(() => []), // Note: tripAPI doesn't have getEmployeeHistory, so filter by email
+        assetAPI.getMy().catch(() => []) // Note: assetAPI doesn't have getEmployeeHistory, so filter by email
+      ]);
+
+      // Combine and tag all requests with type
+      const allRequests = [
+        ...(Array.isArray(timeoffData) ? timeoffData : []).map(req => ({ ...req, request_type: 'timeoff' })),
+        ...(Array.isArray(tripData) ? tripData : [])
+          .filter(item => {
+            const req = Array.isArray(item) ? item[1] : item;
+            return req.employee_email === employee.email;
+          })
+          .map(item => {
+            const [id, req] = Array.isArray(item) ? item : [item.request_id, item];
+            return { ...req, request_id: id, request_type: 'trip' };
+          }),
+        ...(Array.isArray(assetData) ? assetData : [])
+          .filter(item => {
+            const req = Array.isArray(item) ? item[1] : item;
+            return req.employee_email === employee.email;
+          })
+          .map(item => {
+            const [id, req] = Array.isArray(item) ? item : [item.request_id, item];
+            return { ...req, request_id: id, request_type: 'asset' };
+          }),
+      ];
+
+      // Sort by date (most recent first)
+      allRequests.sort((a, b) => {
+        const dateA = new Date(a.start_date || a.created_at);
+        const dateB = new Date(b.start_date || b.created_at);
+        return dateB - dateA;
+      });
+
+      setRequestsHistory(allRequests);
       setError(null);
     } catch (err) {
-      setError(`Failed to load time-off history: ${err.message}`);
+      setError(`Failed to load request history: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -170,10 +207,10 @@ export function EmployeeDetailModal({ employee, onClose }) {
             Overview
           </button>
           <button
-            className={`tab ${activeTab === 'timeoff' ? 'active' : ''}`}
-            onClick={() => setActiveTab('timeoff')}
+            className={`tab ${activeTab === 'requests' ? 'active' : ''}`}
+            onClick={() => setActiveTab('requests')}
           >
-            Time-Off History
+            Requests History
           </button>
           <button
             className={`tab ${activeTab === 'performance' ? 'active' : ''}`}
@@ -231,17 +268,18 @@ export function EmployeeDetailModal({ employee, onClose }) {
             </div>
           )}
 
-          {activeTab === 'timeoff' && (
-            <div className="timeoff-history">
+          {activeTab === 'requests' && (
+            <div className="requests-history">
               {loading ? (
-                <p>Loading time-off history...</p>
-              ) : timeoffHistory.length === 0 ? (
-                <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>No time-off requests for this year.</p>
+                <p>Loading request history...</p>
+              ) : requestsHistory.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>No requests for this year.</p>
               ) : (
                 <table className="timeoff-table">
                   <thead>
                     <tr>
-                      <th>Type</th>
+                      <th>Request Type</th>
+                      <th>Details</th>
                       <th>Start Date</th>
                       <th>End Date</th>
                       <th>Days</th>
@@ -250,12 +288,44 @@ export function EmployeeDetailModal({ employee, onClose }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {timeoffHistory.map((request) => (
+                    {requestsHistory.map((request) => (
                       <tr key={request.request_id}>
-                        <td style={{ textTransform: 'capitalize' }}>{request.timeoff_type?.replace('_', ' ')}</td>
+                        <td>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            background: '#f0f0f0',
+                            display: 'inline-block'
+                          }}>
+                            {request.request_type === 'timeoff' && '🏖️ Time Off'}
+                            {request.request_type === 'trip' && '🌍 Business Trip'}
+                            {request.request_type === 'asset' && '💻 Equipment'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '13px' }}>
+                          {request.request_type === 'timeoff' && (
+                            <span style={{ textTransform: 'capitalize' }}>{request.timeoff_type?.replace('_', ' ')}</span>
+                          )}
+                          {request.request_type === 'trip' && (
+                            <div>
+                              <strong>{request.destination}</strong>
+                              <div style={{ fontSize: '12px', color: '#666' }}>Budget: {request.estimated_budget} {request.currency}</div>
+                            </div>
+                          )}
+                          {request.request_type === 'asset' && (
+                            <div>
+                              <strong>{request.category?.replace('_', ' ').toUpperCase()}</strong>
+                              {request.is_misc && request.custom_description && (
+                                <div style={{ fontSize: '12px', color: '#666' }}>{request.custom_description}</div>
+                              )}
+                            </div>
+                          )}
+                        </td>
                         <td>{formatDate(request.start_date)}</td>
                         <td>{formatDate(request.end_date)}</td>
-                        <td>{request.working_days_count || request.days_count || 'N/A'}</td>
+                        <td>{request.working_days_count || request.days_count || '-'}</td>
                         <td>
                           <span style={{
                             padding: '4px 8px',
@@ -268,7 +338,11 @@ export function EmployeeDetailModal({ employee, onClose }) {
                             {getStatusLabel(request.status)}
                           </span>
                         </td>
-                        <td style={{ fontSize: '13px', color: '#666' }}>{request.notes || '-'}</td>
+                        <td style={{ fontSize: '13px', color: '#666', maxWidth: '200px' }}>
+                          {request.request_type === 'timeoff' && (request.notes || '-')}
+                          {request.request_type === 'trip' && (request.purpose || '-')}
+                          {request.request_type === 'asset' && (request.business_justification || '-')}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
